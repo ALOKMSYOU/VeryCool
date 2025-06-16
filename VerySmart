@@ -1,54 +1,63 @@
 local player = game.Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
 
--- รายการด่านที่ต้องเช็ค
-local zoneIds = {
-	"1350050", "1350051", "1350052", "1350053", "1350054",
-	"1350055", "1350056", "1350057", "1350058", "1350059", "1350100"
-}
+-- สร้างรายชื่อโฟลเดอร์ 1350050 - 1350100
+local zoneIds = {}
+for i = 1350050, 1350100 do
+	table.insert(zoneIds, tostring(i))
+end
 
--- GUI setup
+-- UI สร้าง
 local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
-gui.Name = "DungeonStatusUI"
+gui.Name = "DungeonMiniUI"
+gui.ResetOnSpawn = false
 
-local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.new(0, 320, 0, 420)
-frame.Position = UDim2.new(0, 10, 0, 10)
-frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 220, 0, 320)
+frame.Position = UDim2.new(0, 100, 0, 100)
+frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 frame.BorderSizePixel = 0
+frame.Active = true
+frame.Draggable = true
+frame.Parent = gui
 
--- ปุ่มย่อ/ขยาย
-local toggleButton = Instance.new("TextButton", frame)
-toggleButton.Size = UDim2.new(0, 60, 0, 25)
-toggleButton.Position = UDim2.new(0, 5, 0, 5)
-toggleButton.Text = "ย่อ"
-toggleButton.BackgroundColor3 = Color3.fromRGB(100, 100, 255)
-toggleButton.TextScaled = true
+-- หัวข้อ
+local title = Instance.new("TextLabel", frame)
+title.Size = UDim2.new(1, -30, 0, 25)
+title.Position = UDim2.new(0, 5, 0, 5)
+title.BackgroundTransparency = 1
+title.TextColor3 = Color3.fromRGB(255, 255, 255)
+title.Font = Enum.Font.SourceSansBold
+title.TextScaled = true
+title.Text = "📍 อยู่ในด่าน: ..."
 
 -- ปุ่มปิด
 local closeButton = Instance.new("TextButton", frame)
-closeButton.Size = UDim2.new(0, 25, 0, 25)
-closeButton.Position = UDim2.new(1, -30, 0, 5)
+closeButton.Size = UDim2.new(0, 20, 0, 20)
+closeButton.Position = UDim2.new(1, -25, 0, 5)
 closeButton.Text = "X"
-closeButton.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
-closeButton.TextScaled = true
+closeButton.BackgroundColor3 = Color3.fromRGB(180, 0, 0)
 closeButton.TextColor3 = Color3.new(1,1,1)
+closeButton.TextScaled = true
+closeButton.Font = Enum.Font.SourceSansBold
+closeButton.MouseButton1Click:Connect(function()
+	gui:Destroy()
+end)
 
--- Scrolling content
+-- Scroll view
 local scroll = Instance.new("ScrollingFrame", frame)
+scroll.Size = UDim2.new(1, -10, 1, -40)
 scroll.Position = UDim2.new(0, 5, 0, 35)
-scroll.Size = UDim2.new(1, -10, 1, -45)
 scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
 scroll.ScrollBarThickness = 6
 scroll.BackgroundTransparency = 1
+scroll.BorderSizePixel = 0
 
 local uiList = Instance.new("UIListLayout", scroll)
-uiList.Padding = UDim.new(0, 4)
 uiList.SortOrder = Enum.SortOrder.LayoutOrder
+uiList.Padding = UDim.new(0, 3)
 
-local zoneLabels = {} -- เก็บ Label แสดงผลแต่ละด่าน
-
--- ตรวจว่าผู้เล่นอยู่ในโซนใด
+-- คำนวณตำแหน่งผู้เล่น
 local function getCurrentZone()
 	local hrp = character:FindFirstChild("HumanoidRootPart")
 	if not hrp then return "ไม่พบตำแหน่ง" end
@@ -56,35 +65,31 @@ local function getCurrentZone()
 	for _, zoneId in ipairs(zoneIds) do
 		local folder = workspace:FindFirstChild(zoneId)
 		if folder and folder:IsA("Model") then
-			local zoneCFrame = folder:GetPivot()
-			local zoneSize = folder:GetExtentsSize()
-			local zonePos = zoneCFrame.Position
-
-			local min = zonePos - zoneSize / 2
-			local max = zonePos + zoneSize / 2
-
+			local cf = folder:GetPivot()
+			local size = folder:GetExtentsSize()
 			local pos = hrp.Position
-			if (pos.X >= min.X and pos.X <= max.X) and
-			   (pos.Y >= min.Y and pos.Y <= max.Y) and
-			   (pos.Z >= min.Z and pos.Z <= max.Z) then
+			local min = cf.Position - size / 2
+			local max = cf.Position + size / 2
+
+			if pos.X >= min.X and pos.X <= max.X and
+			   pos.Y >= min.Y and pos.Y <= max.Y and
+			   pos.Z >= min.Z and pos.Z <= max.Z then
 				return zoneId
 			end
 		end
 	end
-	return "อยู่นอกด่าน"
+	return "นอกด่าน"
 end
 
--- ฟังก์ชันอัปเดตข้อมูล
-local function updateDisplay()
-	for _, child in ipairs(scroll:GetChildren()) do
-		if child:IsA("TextLabel") then
-			child:Destroy()
-		end
+-- อัปเดตแสดงผล
+local function update()
+	-- เคลียร์ label เดิม
+	for _, v in pairs(scroll:GetChildren()) do
+		if v:IsA("TextLabel") or v:IsA("TextButton") then v:Destroy() end
 	end
 
-	local chest3 = 0
-	local chest4 = 0
-
+	-- จำนวนกล่องรวม
+	local chest3, chest4 = 0, 0
 	for _, obj in ipairs(workspace:GetDescendants()) do
 		if obj.Name == "DungeonChest_3" then
 			chest3 += 1
@@ -96,11 +101,12 @@ local function updateDisplay()
 	local chestLabel = Instance.new("TextLabel", scroll)
 	chestLabel.Size = UDim2.new(1, 0, 0, 20)
 	chestLabel.BackgroundTransparency = 1
+	chestLabel.Font = Enum.Font.SourceSansBold
 	chestLabel.TextColor3 = Color3.fromRGB(255, 255, 0)
 	chestLabel.TextScaled = true
-	chestLabel.Font = Enum.Font.SourceSansBold
-	chestLabel.Text = "📦 Chest3: " .. chest3 .. " | Chest4: " .. chest4
+	chestLabel.Text = "📦 Chest3: "..chest3.." | Chest4: "..chest4
 
+	-- ตรวจแต่ละโซน
 	for _, zoneId in ipairs(zoneIds) do
 		local folder = workspace:FindFirstChild(zoneId)
 		if folder and folder:IsA("Model") then
@@ -114,51 +120,61 @@ local function updateDisplay()
 			local label = Instance.new("TextLabel", scroll)
 			label.Size = UDim2.new(1, 0, 0, 20)
 			label.BackgroundTransparency = 1
+			label.Font = Enum.Font.SourceSans
 			label.TextColor3 = Color3.fromRGB(255, 255, 255)
 			label.TextScaled = true
-			label.Font = Enum.Font.SourceSans
 			label.Text = "ด่าน " .. zoneId .. " - Monster: " .. count
-
-			zoneLabels[zoneId] = label
 		end
 	end
 
-	local zone = getCurrentZone()
-	local zoneLabel = Instance.new("TextLabel", scroll)
-	zoneLabel.Size = UDim2.new(1, 0, 0, 20)
-	zoneLabel.BackgroundTransparency = 1
-	zoneLabel.TextColor3 = Color3.fromRGB(0, 255, 150)
-	zoneLabel.TextScaled = true
-	zoneLabel.Font = Enum.Font.SourceSansBold
-	zoneLabel.Text = "📍 คุณอยู่ในด่าน: " .. zone
+	-- อัปเดตตำแหน่งผู้เล่น
+	title.Text = "📍 อยู่ในด่าน: " .. getCurrentZone()
+
+	-- Divider
+	local divider = Instance.new("TextLabel", scroll)
+	divider.Size = UDim2.new(1, 0, 0, 20)
+	divider.BackgroundTransparency = 1
+	divider.Text = "👥 วาร์ปไปผู้เล่น (Abilities)"
+	divider.Font = Enum.Font.SourceSansBold
+	divider.TextColor3 = Color3.fromRGB(0, 255, 255)
+	divider.TextScaled = true
+
+	for _, p in ipairs(game.Players:GetPlayers()) do
+		local char = p.Character
+		if char and char:FindFirstChild("Abilities") and char:FindFirstChild("HumanoidRootPart") then
+			local humanoid = char:FindFirstChildOfClass("Humanoid")
+			local abilities = char:FindFirstChild("Abilities")
+			
+			local health = humanoid and math.floor(humanoid.Health) or "?"
+			local maxHealth = humanoid and math.floor(humanoid.MaxHealth) or "?"
+			local mana = abilities:FindFirstChild("Mana") or abilities:FindFirstChild("CurrentMana")
+			local manaVal = mana and math.floor(mana.Value) or "?"
+
+			local btn = Instance.new("TextButton", scroll)
+			btn.Size = UDim2.new(1, 0, 0, 22)
+			btn.Text = string.format("➡ ไปหา: %s | HP: %s/%s | Mana: %s", p.Name, health, maxHealth, manaVal)
+			btn.Font = Enum.Font.SourceSans
+			btn.TextScaled = true
+			btn.BackgroundColor3 = Color3.fromRGB(40, 40, 70)
+			btn.TextColor3 = Color3.new(1, 1, 1)
+
+			btn.MouseButton1Click:Connect(function()
+				local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+				local targetHrp = p.Character and p.Character:FindFirstChild("HumanoidRootPart")
+				if hrp and targetHrp then
+					hrp.CFrame = targetHrp:GetPivot() + Vector3.new(2, 0, 0)
+				end
+			end)
+		end
+	end
 
 	scroll.CanvasSize = UDim2.new(0, 0, 0, uiList.AbsoluteContentSize.Y + 10)
 end
 
--- ปุ่มปิด
-closeButton.MouseButton1Click:Connect(function()
-	gui:Destroy()
-end)
-
--- ปุ่มย่อ/ขยาย
-local minimized = false
-toggleButton.MouseButton1Click:Connect(function()
-	minimized = not minimized
-	if minimized then
-		scroll.Visible = false
-		frame.Size = UDim2.new(0, 320, 0, 40)
-		toggleButton.Text = "ขยาย"
-	else
-		scroll.Visible = true
-		frame.Size = UDim2.new(0, 320, 0, 420)
-		toggleButton.Text = "ย่อ"
-	end
-end)
-
 -- เรียกใช้งานทุก 5 วิ
 task.spawn(function()
 	while gui.Parent do
-		updateDisplay()
+		update()
 		task.wait(5)
 	end
 end)
