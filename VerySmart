@@ -1,29 +1,30 @@
 local player = game.Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
 
--- สร้างรายชื่อโฟลเดอร์ 1350050 - 1350100
+-- รายชื่อโซน 1350050 - 1350100
 local zoneIds = {}
 for i = 1350050, 1350100 do
 	table.insert(zoneIds, tostring(i))
 end
 
--- UI สร้าง
+-- UI หลัก
 local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
 gui.Name = "DungeonMiniUI"
 gui.ResetOnSpawn = false
 
-local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 220, 0, 320)
+local frame = Instance.new("Frame", gui)
+frame.Size = UDim2.new(0, 200, 0, 260)
 frame.Position = UDim2.new(0, 100, 0, 100)
 frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 frame.BorderSizePixel = 0
 frame.Active = true
 frame.Draggable = true
-frame.Parent = gui
+
+local isMinimized = false
 
 -- หัวข้อ
 local title = Instance.new("TextLabel", frame)
-title.Size = UDim2.new(1, -30, 0, 25)
+title.Size = UDim2.new(1, -50, 0, 22)
 title.Position = UDim2.new(0, 5, 0, 5)
 title.BackgroundTransparency = 1
 title.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -44,10 +45,20 @@ closeButton.MouseButton1Click:Connect(function()
 	gui:Destroy()
 end)
 
+-- ปุ่มย่อ
+local toggleButton = Instance.new("TextButton", frame)
+toggleButton.Size = UDim2.new(0, 20, 0, 20)
+toggleButton.Position = UDim2.new(1, -50, 0, 5)
+toggleButton.Text = "-"
+toggleButton.BackgroundColor3 = Color3.fromRGB(0, 130, 255)
+toggleButton.TextColor3 = Color3.new(1,1,1)
+toggleButton.TextScaled = true
+toggleButton.Font = Enum.Font.SourceSansBold
+
 -- Scroll view
 local scroll = Instance.new("ScrollingFrame", frame)
-scroll.Size = UDim2.new(1, -10, 1, -40)
-scroll.Position = UDim2.new(0, 5, 0, 35)
+scroll.Size = UDim2.new(1, -10, 1, -35)
+scroll.Position = UDim2.new(0, 5, 0, 30)
 scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
 scroll.ScrollBarThickness = 6
 scroll.BackgroundTransparency = 1
@@ -56,6 +67,14 @@ scroll.BorderSizePixel = 0
 local uiList = Instance.new("UIListLayout", scroll)
 uiList.SortOrder = Enum.SortOrder.LayoutOrder
 uiList.Padding = UDim.new(0, 3)
+
+-- ย่อ/ขยาย UI
+toggleButton.MouseButton1Click:Connect(function()
+	isMinimized = not isMinimized
+	scroll.Visible = not isMinimized
+	frame.Size = isMinimized and UDim2.new(0, 200, 0, 35) or UDim2.new(0, 200, 0, 260)
+	toggleButton.Text = isMinimized and "+" or "-"
+end)
 
 -- คำนวณตำแหน่งผู้เล่น
 local function getCurrentZone()
@@ -81,32 +100,46 @@ local function getCurrentZone()
 	return "นอกด่าน"
 end
 
--- อัปเดตแสดงผล
+-- ฟังก์ชันอัปเดต
 local function update()
-	-- เคลียร์ label เดิม
 	for _, v in pairs(scroll:GetChildren()) do
 		if v:IsA("TextLabel") or v:IsA("TextButton") then v:Destroy() end
 	end
 
-	-- จำนวนกล่องรวม
+	-- นับกล่องรวม
 	local chest3, chest4 = 0, 0
-	for _, obj in ipairs(workspace:GetDescendants()) do
-		if obj.Name == "DungeonChest_3" then
-			chest3 += 1
-		elseif obj.Name == "DungeonChest_4" then
-			chest4 += 1
+	local chestInZones = {}  -- เช็คจำนวนกล่องในแต่ละโซน
+
+	for _, zoneId in ipairs(zoneIds) do
+		local folder = workspace:FindFirstChild(zoneId)
+		if folder and folder:IsA("Model") then
+			local chestCount3 = 0
+			local chestCount4 = 0
+			for _, obj in ipairs(folder:GetDescendants()) do
+				if obj.Name == "DungeonChest_3" then
+					chestCount3 = chestCount3 + 1
+				elseif obj.Name == "DungeonChest_4" then
+					chestCount4 = chestCount4 + 1
+				end
+			end
+			if chestCount3 > 0 or chestCount4 > 0 then
+				chestInZones[zoneId] = {chest3 = chestCount3, chest4 = chestCount4}
+			end
 		end
 	end
 
-	local chestLabel = Instance.new("TextLabel", scroll)
-	chestLabel.Size = UDim2.new(1, 0, 0, 20)
-	chestLabel.BackgroundTransparency = 1
-	chestLabel.Font = Enum.Font.SourceSansBold
-	chestLabel.TextColor3 = Color3.fromRGB(255, 255, 0)
-	chestLabel.TextScaled = true
-	chestLabel.Text = "📦 Chest3: "..chest3.." | Chest4: "..chest4
+	-- แสดงจำนวนกล่อง
+	for zoneId, chests in pairs(chestInZones) do
+		local chestLabel = Instance.new("TextLabel", scroll)
+		chestLabel.Size = UDim2.new(1, 0, 0, 18)
+		chestLabel.BackgroundTransparency = 1
+		chestLabel.Font = Enum.Font.SourceSansBold
+		chestLabel.TextColor3 = Color3.fromRGB(255, 255, 0)
+		chestLabel.TextScaled = true
+		chestLabel.Text = "ด่าน " .. zoneId .. " | Chest3: " .. chests.chest3 .. " | Chest4: " .. chests.chest4
+	end
 
-	-- ตรวจแต่ละโซน
+	-- ตรวจสอบมอนสเตอร์
 	for _, zoneId in ipairs(zoneIds) do
 		local folder = workspace:FindFirstChild(zoneId)
 		if folder and folder:IsA("Model") then
@@ -118,60 +151,60 @@ local function update()
 			end
 
 			local label = Instance.new("TextLabel", scroll)
-			label.Size = UDim2.new(1, 0, 0, 20)
+			label.Size = UDim2.new(1, 0, 0, 18)
 			label.BackgroundTransparency = 1
 			label.Font = Enum.Font.SourceSans
 			label.TextColor3 = Color3.fromRGB(255, 255, 255)
 			label.TextScaled = true
-			label.Text = "ด่าน " .. zoneId .. " - Monster: " .. count
+			label.Text = "ด่าน " .. zoneId .. " - monster: " .. count
 		end
 	end
 
 	-- อัปเดตตำแหน่งผู้เล่น
 	title.Text = "📍 อยู่ในด่าน: " .. getCurrentZone()
 
-	-- Divider
 	local divider = Instance.new("TextLabel", scroll)
-	divider.Size = UDim2.new(1, 0, 0, 20)
+	divider.Size = UDim2.new(1, 0, 0, 18)
 	divider.BackgroundTransparency = 1
-	divider.Text = "👥 วาร์ปไปผู้เล่น (Abilities)"
+	divider.Text = "👥 ปุ่มวาป"
 	divider.Font = Enum.Font.SourceSansBold
 	divider.TextColor3 = Color3.fromRGB(0, 255, 255)
 	divider.TextScaled = true
 
 	for _, p in ipairs(game.Players:GetPlayers()) do
-		local char = p.Character
-		if char and char:FindFirstChild("Abilities") and char:FindFirstChild("HumanoidRootPart") then
-			local humanoid = char:FindFirstChildOfClass("Humanoid")
-			local abilities = char:FindFirstChild("Abilities")
-			
-			local health = humanoid and math.floor(humanoid.Health) or "?"
-			local maxHealth = humanoid and math.floor(humanoid.MaxHealth) or "?"
-			local mana = abilities:FindFirstChild("Mana") or abilities:FindFirstChild("CurrentMana")
-			local manaVal = mana and math.floor(mana.Value) or "?"
+		if p ~= player then
+			local char = p.Character
+			local hrp = char and char:FindFirstChild("HumanoidRootPart")
+			local humanoid = char and char:FindFirstChildOfClass("Humanoid")
 
-			local btn = Instance.new("TextButton", scroll)
-			btn.Size = UDim2.new(1, 0, 0, 22)
-			btn.Text = string.format("➡ ไปหา: %s | HP: %s/%s | Mana: %s", p.Name, health, maxHealth, manaVal)
-			btn.Font = Enum.Font.SourceSans
-			btn.TextScaled = true
-			btn.BackgroundColor3 = Color3.fromRGB(40, 40, 70)
-			btn.TextColor3 = Color3.new(1, 1, 1)
+			if hrp and humanoid then
+				local hp = math.floor(humanoid.Health)
+				local maxHp = math.floor(humanoid.MaxHealth)
+				local mana = humanoid:FindFirstChild("mana") or humanoid:FindFirstChild("Mana")
+				local manaVal = mana and math.floor(mana.Value) or "?"
 
-			btn.MouseButton1Click:Connect(function()
-				local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-				local targetHrp = p.Character and p.Character:FindFirstChild("HumanoidRootPart")
-				if hrp and targetHrp then
-					hrp.CFrame = targetHrp:GetPivot() + Vector3.new(2, 0, 0)
-				end
-			end)
+				local btn = Instance.new("TextButton", scroll)
+				btn.Size = UDim2.new(1, 0, 0, 20)
+				btn.Text = string.format("➡ %s | hp: %s/%s | mana: %s", p.Name, hp, maxHp, manaVal)
+				btn.Font = Enum.Font.SourceSans
+				btn.TextScaled = true
+				btn.BackgroundColor3 = Color3.fromRGB(40, 40, 70)
+				btn.TextColor3 = Color3.new(1, 1, 1)
+
+				btn.MouseButton1Click:Connect(function()
+					local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+					if root then
+						root.CFrame = hrp:GetPivot() + Vector3.new(2, 0, 0)
+					end
+				end)
+			end
 		end
 	end
 
 	scroll.CanvasSize = UDim2.new(0, 0, 0, uiList.AbsoluteContentSize.Y + 10)
 end
 
--- เรียกใช้งานทุก 5 วิ
+-- เรียกอัปเดตเรื่อย ๆ
 task.spawn(function()
 	while gui.Parent do
 		update()
