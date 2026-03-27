@@ -4,913 +4,883 @@ local TeleportService = game:GetService("TeleportService")
 local CoreGui = game:GetService("CoreGui")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
 local httprequest = (syn and syn.request) or (fluxus and fluxus.request) or (http and http.request) or request
-
-local set_clipboard = setclipboard or toclipboard or set_clipboard or (Clipboard and Clipboard.set) or function(text) print("Clipboard unsupported: " .. text) end
+local set_clipboard = setclipboard or toclipboard or set_clipboard or (Clipboard and Clipboard.set) or function() end
 
 if _G.JoinAnyoneUI then pcall(function() CoreGui.JoinAnyoneUI:Destroy() end) end
 _G.JoinAnyoneUI = true
 
-local RENDER_PROXY = "https://myproxy-kra1.onrender.com"
-
 local Theme = {
-    Background = Color3.fromRGB(10, 12, 16),
-    Surface = Color3.fromRGB(20, 24, 32),
-    Primary = Color3.fromRGB(0, 255, 100),
-    Secondary = Color3.fromRGB(0, 180, 255),
-    Text = Color3.fromRGB(240, 245, 255),
-    TextMuted = Color3.fromRGB(100, 120, 140),
-    Border = Color3.fromRGB(40, 50, 65),
-    Error = Color3.fromRGB(255, 50, 50),
-    Warning = Color3.fromRGB(255, 150, 0)
+    BG = Color3.fromRGB(3, 5, 4),
+    Panel = Color3.fromRGB(8, 15, 10),
+    Item = Color3.fromRGB(12, 22, 15),
+    Primary = Color3.fromRGB(0, 255, 80),
+    Text = Color3.fromRGB(220, 255, 220),
+    SubText = Color3.fromRGB(80, 160, 100),
+    Border = Color3.fromRGB(15, 60, 25),
+    Danger = Color3.fromRGB(255, 30, 50)
 }
 
 local screenGui = Instance.new("ScreenGui", CoreGui)
 screenGui.Name = "JoinAnyoneUI"
 screenGui.ResetOnSpawn = false
+screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
-local function createCorner(parent, radius)
-    local corner = Instance.new("UICorner", parent)
-    corner.CornerRadius = UDim.new(0, radius or 6)
-    return corner
+local function rC(p, r)
+    local c = Instance.new("UICorner", p)
+    c.CornerRadius = UDim.new(0, r or 10)
+    return c
 end
 
-local function createStroke(parent, color, thickness)
-    local stroke = Instance.new("UIStroke", parent)
-    stroke.Color = color or Theme.Border
-    stroke.Thickness = thickness or 1
-    stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-    return stroke
+local function rS(p, c, t)
+    local s = Instance.new("UIStroke", p)
+    s.Color = c or Theme.Border
+    s.Thickness = t or 1.5
+    s.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    return s
 end
 
-local function applyHover(frame, targetColor)
-    local orig = frame.BackgroundColor3
-    frame.MouseEnter:Connect(function() TweenService:Create(frame, TweenInfo.new(0.2), {BackgroundColor3 = targetColor}):Play() end)
-    frame.MouseLeave:Connect(function() TweenService:Create(frame, TweenInfo.new(0.2), {BackgroundColor3 = orig}):Play() end)
+local function aH(f, tc, sc)
+    local og = f.BackgroundColor3
+    f.MouseEnter:Connect(function() 
+        TweenService:Create(f, TweenInfo.new(0.15, Enum.EasingStyle.Cubic, Enum.EasingDirection.Out), {BackgroundColor3 = tc}):Play() 
+        if sc and f:FindFirstChildOfClass("UIStroke") then TweenService:Create(f:FindFirstChildOfClass("UIStroke"), TweenInfo.new(0.15), {Color = sc}):Play() end
+    end)
+    f.MouseLeave:Connect(function() 
+        TweenService:Create(f, TweenInfo.new(0.3, Enum.EasingStyle.Cubic, Enum.EasingDirection.Out), {BackgroundColor3 = og}):Play() 
+        if sc and f:FindFirstChildOfClass("UIStroke") then TweenService:Create(f:FindFirstChildOfClass("UIStroke"), TweenInfo.new(0.3), {Color = Theme.Border}):Play() end
+    end)
 end
 
-local function applyGlitchEffect(object)
+local function aP(b)
+    b.MouseButton1Down:Connect(function() TweenService:Create(b, TweenInfo.new(0.05), {Size = UDim2.new(b.Size.X.Scale, b.Size.X.Offset - 4, b.Size.Y.Scale, b.Size.Y.Offset - 4)}):Play() end)
+    b.MouseButton1Up:Connect(function() TweenService:Create(b, TweenInfo.new(0.4, Enum.EasingStyle.Elastic, Enum.EasingDirection.Out), {Size = UDim2.new(b.Size.X.Scale, b.Size.X.Offset + 4, b.Size.Y.Scale, b.Size.Y.Offset + 4)}):Play() end)
+end
+
+local function safeDec(d)
+    local s, r = pcall(function() return HttpService:JSONDecode(d) end)
+    return s and r or nil
+end
+
+local function urlE(s)
+    if s then
+        s = string.gsub(s, "\n", "\r\n")
+        s = string.gsub(s, "([^%w %-%_%.%~])", function(c) return string.format("%%%02X", string.byte(c)) end)
+        s = string.gsub(s, " ", "+")
+    end
+    return s
+end
+
+local tBtn = Instance.new("TextButton", screenGui)
+tBtn.Size = UDim2.new(0, 56, 0, 56)
+tBtn.Position = UDim2.new(0.05, 0, 0.15, 0)
+tBtn.BackgroundColor3 = Theme.Panel
+tBtn.Text = "JAO"
+tBtn.TextColor3 = Theme.Primary
+tBtn.Font = Enum.Font.GothamBlack
+tBtn.TextSize = 20
+rC(tBtn, 28)
+local tBtnS = rS(tBtn, Theme.Primary, 2)
+aP(tBtn)
+
+local pR = Instance.new("Frame", screenGui)
+pR.Size = UDim2.new(0, 56, 0, 56)
+pR.Position = tBtn.Position
+pR.BackgroundTransparency = 1
+pR.ZIndex = 0
+rC(pR, 28)
+local pS = rS(pR, Theme.Primary, 2)
+
+task.spawn(function()
+    while pR.Parent do
+        TweenService:Create(pR, TweenInfo.new(1.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Size = UDim2.new(0, 90, 0, 90), Position = pR.Position - UDim2.new(0, 17, 0, 17)}):Play()
+        TweenService:Create(pS, TweenInfo.new(1.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Transparency = 1}):Play()
+        TweenService:Create(tBtnS, TweenInfo.new(0.6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {Color = Color3.fromRGB(0, 100, 30)}):Play()
+        task.wait(1.2)
+        pR.Size = UDim2.new(0, 56, 0, 56)
+        pR.Position = tBtn.Position
+        pS.Transparency = 0
+        task.wait(0.1)
+    end
+end)
+
+local mG = Instance.new("CanvasGroup", screenGui)
+mG.AnchorPoint = Vector2.new(0.5, 0.5)
+mG.Size = UDim2.new(0, 720, 0, 460)
+mG.Position = UDim2.new(0.5, 0, 0.5, 0)
+mG.BackgroundColor3 = Theme.BG
+mG.BorderSizePixel = 0
+rC(mG, 14)
+local mGS = rS(mG, Theme.Primary, 2)
+
+local mGlow = Instance.new("Frame", mG)
+mGlow.Size = UDim2.new(1, 0, 1, 0)
+mGlow.BackgroundTransparency = 1
+local mGlowS = rS(mGlow, Theme.Primary, 5)
+mGlowS.Transparency = 0.5
+rC(mGlow, 14)
+
+local scanner = Instance.new("Frame", mG)
+scanner.Size = UDim2.new(1, 0, 0, 3)
+scanner.BackgroundColor3 = Theme.Primary
+scanner.BackgroundTransparency = 0.6
+scanner.BorderSizePixel = 0
+scanner.ZIndex = 100
+local scanGrad = Instance.new("UIGradient", scanner)
+scanGrad.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Theme.BG), ColorSequenceKeypoint.new(0.5, Theme.Primary), ColorSequenceKeypoint.new(1, Theme.BG)})
+scanGrad.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.5, 0.2), NumberSequenceKeypoint.new(1, 1)})
+
+task.spawn(function()
+    while mG.Parent do
+        scanner.Position = UDim2.new(0, 0, -0.1, 0)
+        TweenService:Create(scanner, TweenInfo.new(3, Enum.EasingStyle.Linear), {Position = UDim2.new(0, 0, 1.1, 0)}):Play()
+        task.wait(3)
+    end
+end)
+
+task.spawn(function()
+    while mG.Parent do
+        TweenService:Create(mGS, TweenInfo.new(1.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {Color = Color3.fromRGB(0, 120, 40)}):Play()
+        TweenService:Create(mGlowS, TweenInfo.new(1.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {Transparency = 0.8}):Play()
+        task.wait(3)
+    end
+end)
+
+local rainC = Instance.new("Frame", mG)
+rainC.Size = UDim2.new(1, 0, 1, 0)
+rainC.BackgroundTransparency = 1
+rainC.ZIndex = 0
+rainC.ClipsDescendants = true
+task.spawn(function()
+    local chars = {"0","1","ア","イ","ウ","エ","オ","カ","キ","ク","ケ","コ","X","Y","Z","@","#","$"}
+    while task.wait(0.05) do
+        if not rainC.Parent then break end
+        local t = Instance.new("TextLabel", rainC)
+        t.Text = chars[math.random(1, #chars)]
+        t.TextColor3 = Theme.Primary
+        t.TextSize = math.random(10, 18)
+        t.Font = Enum.Font.Code
+        t.BackgroundTransparency = 1
+        t.Position = UDim2.new(math.random(), 0, -0.1, 0)
+        t.Size = UDim2.new(0, 20, 0, 20)
+        t.TextTransparency = math.random(2, 7)/10
+        local dur = math.random(20, 50)/10
+        TweenService:Create(t, TweenInfo.new(dur, Enum.EasingStyle.Linear), {Position = UDim2.new(t.Position.X.Scale, 0, 1.1, 0), TextTransparency = 1}):Play()
+        game.Debris:AddItem(t, dur)
+    end
+end)
+
+local dF = Instance.new("Frame", mG)
+dF.Size = UDim2.new(1, 0, 0, 50)
+dF.BackgroundTransparency = 1
+dF.Active = true
+dF.ZIndex = 10
+
+local isV, dtB, dsB, spB, hDB = true, false, nil, nil, false
+tBtn.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then dtB = true hDB = false dsB = i.Position spB = tBtn.Position end end)
+UserInputService.InputChanged:Connect(function(i) if dtB and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then local d = i.Position - dsB if d.Magnitude > 5 then hDB = true tBtn.Position = UDim2.new(spB.X.Scale, spB.X.Offset + d.X, spB.Y.Scale, spB.Y.Offset + d.Y) end end end)
+UserInputService.InputEnded:Connect(function(i) if dtB and (i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch) then dtB = false if not hDB then isV = not isV if isV then mG.Visible = true TweenService:Create(mG, TweenInfo.new(0.6, Enum.EasingStyle.Elastic, Enum.EasingDirection.Out), {Size = UDim2.new(0, 720, 0, 460), GroupTransparency = 0}):Play() else TweenService:Create(mG, TweenInfo.new(0.3, Enum.EasingStyle.Sine, Enum.EasingDirection.In), {Size = UDim2.new(0, 600, 0, 400), GroupTransparency = 1}):Play() task.delay(0.3, function() mG.Visible = false end) end end end end)
+
+local dtM, dsM, spM = false, nil, nil
+dF.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then dtM = true dsM = i.Position spM = mG.Position end end)
+UserInputService.InputChanged:Connect(function(i) if dtM and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then local d = i.Position - dsM mG.Position = UDim2.new(spM.X.Scale, spM.X.Offset + d.X, spM.Y.Scale, spM.Y.Offset + d.Y) end end)
+UserInputService.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then dtM = false end end)
+
+local sB = Instance.new("Frame", mG)
+sB.Size = UDim2.new(0, 190, 1, -30)
+sB.Position = UDim2.new(0, 15, 0, 15)
+sB.BackgroundColor3 = Theme.Panel
+sB.BackgroundTransparency = 0.1
+rC(sB, 12)
+rS(sB, Theme.Border, 1.5)
+
+local tL = Instance.new("TextLabel", sB)
+tL.Size = UDim2.new(1, 0, 0, 40)
+tL.Position = UDim2.new(0, 0, 0, 15)
+tL.Text = "JOIN ANYONE"
+tL.TextColor3 = Theme.Primary
+tL.Font = Enum.Font.GothamBlack
+tL.TextSize = 17
+tL.BackgroundTransparency = 1
+local tLS = Instance.new("UIStroke", tL)
+tLS.Color = Theme.Primary
+tLS.Transparency = 0.7
+tLS.Thickness = 1.2
+
+local aImg = Instance.new("ImageLabel", sB)
+aImg.Size = UDim2.new(0, 80, 0, 80)
+aImg.Position = UDim2.new(0.5, -40, 0, 65)
+aImg.BackgroundColor3 = Theme.Item
+aImg.Image = "rbxasset://textures/ui/GuiImagePlaceholder.png"
+rC(aImg, 40)
+local aImgS = rS(aImg, Theme.Primary, 2)
+
+local crossH1 = Instance.new("Frame", aImg)
+crossH1.Size = UDim2.new(1.3, 0, 1.3, 0)
+crossH1.Position = UDim2.new(-0.15, 0, -0.15, 0)
+crossH1.BackgroundTransparency = 1
+local chS1 = rS(crossH1, Theme.Primary, 1)
+chS1.Transparency = 0.5
+rC(crossH1, 60)
+
+local crossH2 = Instance.new("Frame", aImg)
+crossH2.Size = UDim2.new(1.15, 0, 1.15, 0)
+crossH2.Position = UDim2.new(-0.075, 0, -0.075, 0)
+crossH2.BackgroundTransparency = 1
+local chS2 = rS(crossH2, Theme.Primary, 1)
+chS2.LineJoinMode = Enum.LineJoinMode.Bevel
+chS2.Transparency = 0.3
+
+task.spawn(function()
+    while aImg.Parent do
+        TweenService:Create(crossH1, TweenInfo.new(4, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1), {Rotation = 360}):Play()
+        TweenService:Create(crossH2, TweenInfo.new(3, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1), {Rotation = -360}):Play()
+        TweenService:Create(aImgS, TweenInfo.new(1.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {Color = Color3.fromRGB(0, 80, 20)}):Play()
+        task.wait(4)
+    end
+end)
+
+local function crT(p, t)
+    local b = Instance.new("TextButton", p)
+    b.Size = UDim2.new(0.85, 0, 0, 44)
+    b.BackgroundColor3 = Theme.Item
+    b.TextColor3 = Theme.SubText
+    b.Font = Enum.Font.GothamBlack
+    b.TextSize = 13
+    b.Text = t
+    b.AutoButtonColor = false
+    rC(b, 8)
+    local s = rS(b, Theme.Border, 1.5)
+    aP(b)
+    aH(b, Color3.fromRGB(15, 35, 20), Theme.Primary)
+    return b, s
+end
+
+local bC = Instance.new("Frame", sB)
+bC.Size = UDim2.new(1, 0, 0, 180)
+bC.Position = UDim2.new(0, 0, 0, 175)
+bC.BackgroundTransparency = 1
+local bCL = Instance.new("UIListLayout", bC)
+bCL.Padding = UDim.new(0, 12)
+bCL.HorizontalAlignment = Enum.HorizontalAlignment.Center
+
+local snpB, snpS = crT(bC, "SNIPER")
+local brwB, brwS = crT(bC, "BROWSER")
+local fndB, fndS = crT(bC, "DATABASE")
+
+local cP = Instance.new("Frame", mG)
+cP.Size = UDim2.new(1, -230, 1, -30)
+cP.Position = UDim2.new(0, 215, 0, 15)
+cP.BackgroundColor3 = Theme.Panel
+cP.BackgroundTransparency = 0.15
+rC(cP, 12)
+local cPS = rS(cP, Theme.Primary, 1.5)
+
+local pg1 = Instance.new("Frame", cP) pg1.Size = UDim2.new(1, 0, 1, 0) pg1.BackgroundTransparency = 1
+local pg2 = Instance.new("Frame", cP) pg2.Size = UDim2.new(1, 0, 1, 0) pg2.BackgroundTransparency = 1 pg2.Visible = false
+local pg3 = Instance.new("Frame", cP) pg3.Size = UDim2.new(1, 0, 1, 0) pg3.BackgroundTransparency = 1 pg3.Visible = false
+
+local cLine = Instance.new("Frame", mG)
+cLine.Size = UDim2.new(0, 4, 0, 24)
+cLine.Position = UDim2.new(0, 205, 0, 199)
+cLine.BackgroundColor3 = Theme.Primary
+cLine.BorderSizePixel = 0
+rC(cLine, 2)
+
+local function swT(n)
+    pg1.Visible = (n == 1)
+    pg2.Visible = (n == 2)
+    pg3.Visible = (n == 3)
+    
+    local clrActive = Theme.Primary
+    local clrInactive = Theme.Item
+    
+    TweenService:Create(snpB, TweenInfo.new(0.3), {BackgroundColor3 = (n==1) and clrActive or clrInactive, TextColor3 = (n==1) and Theme.BG or Theme.SubText}):Play()
+    TweenService:Create(brwB, TweenInfo.new(0.3), {BackgroundColor3 = (n==2) and clrActive or clrInactive, TextColor3 = (n==2) and Theme.BG or Theme.SubText}):Play()
+    TweenService:Create(fndB, TweenInfo.new(0.3), {BackgroundColor3 = (n==3) and clrActive or clrInactive, TextColor3 = (n==3) and Theme.BG or Theme.SubText}):Play()
+    
+    TweenService:Create(snpS, TweenInfo.new(0.3), {Color = (n==1) and Theme.Primary or Theme.Border}):Play()
+    TweenService:Create(brwS, TweenInfo.new(0.3), {Color = (n==2) and Theme.Primary or Theme.Border}):Play()
+    TweenService:Create(fndS, TweenInfo.new(0.3), {Color = (n==3) and Theme.Primary or Theme.Border}):Play()
+    
+    local yP = 199
+    if n == 2 then yP = 255 elseif n == 3 then yP = 311 end
+    
+    TweenService:Create(cLine, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(0, 205, 0, yP)}):Play()
+end
+
+snpB.MouseButton1Click:Connect(function() swT(1) end)
+brwB.MouseButton1Click:Connect(function() swT(2) end)
+fndB.MouseButton1Click:Connect(function() swT(3) end)
+swT(1)
+
+local function crI(p, ph, wOff)
+    local bg = Instance.new("Frame", p)
+    bg.Size = UDim2.new(1, -(wOff or 0), 1, 0)
+    bg.BackgroundColor3 = Theme.Item
+    rC(bg, 8)
+    local s = rS(bg, Theme.Border, 1.5)
+    
+    local dL = Instance.new("Frame", bg)
+    dL.Size = UDim2.new(0, 3, 0.4, 0)
+    dL.Position = UDim2.new(0, 0, 0.3, 0)
+    dL.BackgroundColor3 = Theme.Primary
+    dL.BackgroundTransparency = 1
+    rC(dL, 1)
+    
+    local bx = Instance.new("TextBox", bg)
+    bx.Size = UDim2.new(1, -24, 1, 0)
+    bx.Position = UDim2.new(0, 12, 0, 0)
+    bx.BackgroundTransparency = 1
+    bx.TextColor3 = Theme.Text
+    bx.PlaceholderText = ph
+    bx.PlaceholderColor3 = Theme.SubText
+    bx.Font = Enum.Font.Code
+    bx.TextSize = 13
+    bx.TextXAlignment = Enum.TextXAlignment.Left
+    bx.Text = ""
+    
+    bx.Focused:Connect(function() TweenService:Create(s, TweenInfo.new(0.2), {Color = Theme.Primary}):Play() TweenService:Create(dL, TweenInfo.new(0.2), {BackgroundTransparency = 0}):Play() end)
+    bx.FocusLost:Connect(function() TweenService:Create(s, TweenInfo.new(0.2), {Color = Theme.Border}):Play() TweenService:Create(dL, TweenInfo.new(0.2), {BackgroundTransparency = 1}):Play() end)
+    return bx, bg
+end
+
+-- ================= [ SNIPER TAB ] =================
+local l1 = Instance.new("UIListLayout", pg1)
+l1.Padding = UDim.new(0, 12)
+l1.HorizontalAlignment = Enum.HorizontalAlignment.Center
+local p1 = Instance.new("UIPadding", pg1)
+p1.PaddingTop = UDim.new(0, 16) p1.PaddingBottom = UDim.new(0, 16)
+
+local t1 = Instance.new("TextLabel", pg1)
+t1.Size = UDim2.new(0.92, 0, 0, 20)
+t1.Text = "> TARGET_LOCK.EXE_"
+t1.TextColor3 = Theme.Primary
+t1.Font = Enum.Font.Code
+t1.TextSize = 15
+t1.TextXAlignment = Enum.TextXAlignment.Left
+t1.BackgroundTransparency = 1
+
+local uBxC = Instance.new("Frame", pg1) uBxC.Size = UDim2.new(0.92, 0, 0, 42) uBxC.BackgroundTransparency = 1
+local pBxC = Instance.new("Frame", pg1) pBxC.Size = UDim2.new(0.92, 0, 0, 42) pBxC.BackgroundTransparency = 1
+local sBxC = Instance.new("Frame", pg1) sBxC.Size = UDim2.new(0.92, 0, 0, 42) sBxC.BackgroundTransparency = 1
+
+local uBx = crI(uBxC, "Target Username or UserId", 0)
+local pBx = crI(pBxC, "Place ID (Blank = Current)", 0)
+local sBx = crI(sBxC, "Max Scans (Blank = Full)", 0)
+
+local actC = Instance.new("Frame", pg1)
+actC.Size = UDim2.new(0.92, 0, 0, 42)
+actC.BackgroundTransparency = 1
+local eBtn = Instance.new("TextButton", actC)
+eBtn.Size = UDim2.new(0.7, -6, 1, 0)
+eBtn.BackgroundColor3 = Theme.Primary
+eBtn.TextColor3 = Theme.BG
+eBtn.Font = Enum.Font.GothamBlack
+eBtn.TextSize = 15
+eBtn.Text = "EXECUTE"
+rC(eBtn, 8) aP(eBtn)
+local clBtn = Instance.new("TextButton", actC)
+clBtn.Size = UDim2.new(0.3, -6, 1, 0)
+clBtn.Position = UDim2.new(0.7, 12, 0, 0)
+clBtn.BackgroundColor3 = Theme.Item
+clBtn.TextColor3 = Theme.Danger
+clBtn.Font = Enum.Font.GothamBlack
+clBtn.TextSize = 15
+clBtn.Text = "CLEAR"
+rC(clBtn, 8) rS(clBtn, Theme.Danger, 1.5) aH(clBtn, Color3.fromRGB(50, 10, 10)) aP(clBtn)
+
+local scT = Instance.new("ScrollingFrame", pg1)
+scT.Size = UDim2.new(0.92, 0, 0, 130)
+scT.BackgroundColor3 = Theme.Item
+scT.BackgroundTransparency = 0.4
+scT.BorderSizePixel = 0
+scT.ScrollBarThickness = 2
+scT.ScrollBarImageColor3 = Theme.Primary
+scT.AutomaticCanvasSize = Enum.AutomaticSize.Y
+rC(scT, 8) rS(scT, Theme.Border, 1.5)
+local slL = Instance.new("UIListLayout", scT)
+slL.Padding = UDim.new(0, 4)
+local spP = Instance.new("UIPadding", scT)
+spP.PaddingLeft = UDim.new(0, 8) spP.PaddingTop = UDim.new(0, 8) spP.PaddingBottom = UDim.new(0, 8)
+
+local iL = 0
+local function adL(t, c)
+    iL = iL + 1
+    local e = Instance.new("TextLabel", scT)
+    e.Size = UDim2.new(1, -8, 0, 16)
+    e.Text = ""
+    e.TextColor3 = c or Theme.SubText
+    e.Font = Enum.Font.Code
+    e.TextSize = 12
+    e.TextXAlignment = Enum.TextXAlignment.Left
+    e.BackgroundTransparency = 1
+    scT.CanvasPosition = Vector2.new(0, 9999)
     task.spawn(function()
-        local origPos = object.Position
-        while object.Parent do
-            task.wait(math.random(2, 6))
-            for i=1, 2 do
-                object.Position = origPos + UDim2.new(0, math.random(-2, 2), 0, math.random(-1, 1))
-                task.wait(0.05)
-                object.Position = origPos
-                task.wait(0.05)
-            end
+        local fullText = string.format("[SYS] %s", t)
+        for i = 1, #fullText do
+            e.Text = string.sub(fullText, 1, i) .. (i % 2 == 0 and "_" or "")
+            task.wait(0.01)
         end
+        e.Text = fullText
     end)
 end
+clBtn.MouseButton1Click:Connect(function() iL = 0 for _, c in ipairs(scT:GetChildren()) do if c:IsA("TextLabel") then c:Destroy() end end end)
 
-local function safeJSONDecode(data) 
-    local s, res = pcall(function() return HttpService:JSONDecode(data) end)
-    return s and res or nil 
+
+-- ================= [ BROWSER TAB ] =================
+local l2 = Instance.new("UIListLayout", pg2)
+l2.Padding = UDim.new(0, 12)
+l2.HorizontalAlignment = Enum.HorizontalAlignment.Center
+local p2 = Instance.new("UIPadding", pg2)
+p2.PaddingTop = UDim.new(0, 16) p2.PaddingBottom = UDim.new(0, 16)
+
+local t2 = Instance.new("TextLabel", pg2)
+t2.Size = UDim2.new(0.92, 0, 0, 20)
+t2.Text = "> NETWORK_NODES.SH_"
+t2.TextColor3 = Theme.Primary
+t2.Font = Enum.Font.Code
+t2.TextSize = 15
+t2.TextXAlignment = Enum.TextXAlignment.Left
+t2.BackgroundTransparency = 1
+
+local srC1 = Instance.new("Frame", pg2)
+srC1.Size = UDim2.new(0.92, 0, 0, 42)
+srC1.BackgroundTransparency = 1
+local bpBx = crI(srC1, "Place ID (Optional)", 52)
+local rfBtn = Instance.new("ImageButton", srC1)
+rfBtn.Size = UDim2.new(0, 42, 1, 0)
+rfBtn.Position = UDim2.new(1, -42, 0, 0)
+rfBtn.BackgroundColor3 = Theme.Item
+rfBtn.Image = "rbxassetid://6031094670"
+rfBtn.ImageColor3 = Theme.Primary
+rC(rfBtn, 8) rS(rfBtn, Theme.Border, 1.5) aH(rfBtn, Color3.fromRGB(0, 40, 20), Theme.Primary) aP(rfBtn)
+
+local srC2 = Instance.new("Frame", pg2)
+srC2.Size = UDim2.new(0.92, 0, 0, 42)
+srC2.BackgroundTransparency = 1
+local bfBx = crI(srC2, "Find Player (User/ID)", 52)
+local ffBtn = Instance.new("TextButton", srC2)
+ffBtn.Size = UDim2.new(0, 42, 1, 0)
+ffBtn.Position = UDim2.new(1, -42, 0, 0)
+ffBtn.BackgroundColor3 = Theme.Primary
+ffBtn.TextColor3 = Theme.BG
+ffBtn.Font = Enum.Font.GothamBlack
+ffBtn.TextSize = 10
+ffBtn.Text = "FIND"
+rC(ffBtn, 8) aP(ffBtn)
+
+local flC = Instance.new("Frame", pg2)
+flC.Size = UDim2.new(0.92, 0, 0, 28)
+flC.BackgroundTransparency = 1
+local fLay = Instance.new("UIListLayout", flC)
+fLay.FillDirection = Enum.FillDirection.Horizontal
+fLay.SortOrder = Enum.SortOrder.LayoutOrder
+fLay.Padding = UDim.new(0, 8)
+local FLT = {"All", "Low Ping", "Small", "Large"}
+local fBts, cF = {}, "All"
+for i, f in ipairs(FLT) do
+    local b = Instance.new("TextButton", flC)
+    b.Size = UDim2.new(0.25, -6, 1, 0)
+    b.BackgroundColor3 = (i==1) and Theme.Primary or Theme.Item
+    b.TextColor3 = (i==1) and Theme.BG or Theme.SubText
+    b.Font = Enum.Font.GothamBold
+    b.TextSize = 11
+    b.Text = string.upper(f)
+    rC(b, 6) rS(b, Theme.Border, 1.5) aP(b)
+    fBts[f] = b
 end
 
-local toggleBtn = Instance.new("ImageButton", screenGui)
-toggleBtn.Size = UDim2.new(0, 50, 0, 50)
-toggleBtn.Position = UDim2.new(0.05, 0, 0.15, 0)
-toggleBtn.BackgroundColor3 = Theme.Background
-toggleBtn.BackgroundTransparency = 0.2
-toggleBtn.Image = "rbxassetid://6031280224"
-toggleBtn.ImageColor3 = Theme.Primary
-createCorner(toggleBtn, 25)
-createStroke(toggleBtn, Theme.Primary, 2)
+local scB = Instance.new("ScrollingFrame", pg2)
+scB.Size = UDim2.new(0.92, 0, 0, 160)
+scB.BackgroundColor3 = Theme.BG
+scB.BackgroundTransparency = 1
+scB.BorderSizePixel = 0
+scB.ScrollBarThickness = 2
+scB.ScrollBarImageColor3 = Theme.Primary
+scB.AutomaticCanvasSize = Enum.AutomaticSize.Y
+local blL = Instance.new("UIListLayout", scB)
+blL.Padding = UDim.new(0, 8)
 
-local main = Instance.new("CanvasGroup", screenGui)
-main.AnchorPoint = Vector2.new(0.5, 0.5)
-main.Size = UDim2.new(0, 580, 0, 380)
-main.Position = UDim2.new(0.5, 0, 0.5, 0)
-main.BackgroundColor3 = Theme.Background
-main.BorderSizePixel = 0
-createCorner(main, 8)
-createStroke(main, Theme.Primary, 2)
+local pgC = Instance.new("Frame", pg2)
+pgC.Size = UDim2.new(0.92, 0, 0, 32)
+pgC.BackgroundTransparency = 1
+local pvB = Instance.new("TextButton", pgC)
+pvB.Size = UDim2.new(0, 80, 1, 0)
+pvB.BackgroundColor3 = Theme.Item
+pvB.TextColor3 = Theme.Primary
+pvB.Font = Enum.Font.GothamBlack
+pvB.TextSize = 12
+pvB.Text = "◀ BACK"
+rC(pvB, 6) rS(pvB, Theme.Primary, 1.5) aH(pvB, Color3.fromRGB(0, 40, 20)) aP(pvB)
+local nxB = Instance.new("TextButton", pgC)
+nxB.Size = UDim2.new(0, 80, 1, 0)
+nxB.Position = UDim2.new(1, -80, 0, 0)
+nxB.BackgroundColor3 = Theme.Item
+nxB.TextColor3 = Theme.Primary
+nxB.Font = Enum.Font.GothamBlack
+nxB.TextSize = 12
+nxB.Text = "NEXT ▶"
+rC(nxB, 6) rS(nxB, Theme.Primary, 1.5) aH(nxB, Color3.fromRGB(0, 40, 20)) aP(nxB)
+local pLb = Instance.new("TextLabel", pgC)
+pLb.Size = UDim2.new(1, -180, 1, 0)
+pLb.Position = UDim2.new(0, 90, 0, 0)
+pLb.BackgroundTransparency = 1
+pLb.TextColor3 = Theme.Primary
+pLb.Font = Enum.Font.Code
+pLb.TextSize = 13
+pLb.Text = "PAGE 1 / 1"
 
-local isVisible = true
-local dragToggleBtn, dragStartBtn, startPosBtn, hasDraggedBtn = false, nil, nil, false
 
-toggleBtn.InputBegan:Connect(function(input) 
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then 
-        dragToggleBtn = true
-        hasDraggedBtn = false
-        dragStartBtn = input.Position
-        startPosBtn = toggleBtn.Position 
-    end 
-end)
+-- ================= [ DATABASE TAB ] =================
+local l3 = Instance.new("UIListLayout", pg3)
+l3.Padding = UDim.new(0, 12)
+l3.HorizontalAlignment = Enum.HorizontalAlignment.Center
+local p3 = Instance.new("UIPadding", pg3)
+p3.PaddingTop = UDim.new(0, 16) p3.PaddingBottom = UDim.new(0, 16)
 
-UserInputService.InputChanged:Connect(function(input) 
-    if dragToggleBtn and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then 
-        local delta = input.Position - dragStartBtn
-        if delta.Magnitude > 5 then 
-            hasDraggedBtn = true
-            toggleBtn.Position = UDim2.new(startPosBtn.X.Scale, startPosBtn.X.Offset + delta.X, startPosBtn.Y.Scale, startPosBtn.Y.Offset + delta.Y) 
-        end 
-    end 
-end)
+local t3 = Instance.new("TextLabel", pg3)
+t3.Size = UDim2.new(0.92, 0, 0, 20)
+t3.Text = "> DB_SEARCH.BAT_"
+t3.TextColor3 = Theme.Primary
+t3.Font = Enum.Font.Code
+t3.TextSize = 15
+t3.TextXAlignment = Enum.TextXAlignment.Left
+t3.BackgroundTransparency = 1
 
-UserInputService.InputEnded:Connect(function(input)
-    if dragToggleBtn and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
-        dragToggleBtn = false
-        if not hasDraggedBtn then
-            isVisible = not isVisible
-            if isVisible then 
-                main.Visible = true 
-                TweenService:Create(main, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = UDim2.new(0, 580, 0, 380), GroupTransparency = 0}):Play()
-            else
-                TweenService:Create(main, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), {Size = UDim2.new(0, 530, 0, 330), GroupTransparency = 1}):Play()
-                task.delay(0.3, function() main.Visible = false end)
-            end
-        end
-    end
-end)
+local srC3 = Instance.new("Frame", pg3)
+srC3.Size = UDim2.new(0.92, 0, 0, 42)
+srC3.BackgroundTransparency = 1
+local gBx = crI(srC3, "Enter Exact Game Name...", 52)
+local gSBtn = Instance.new("TextButton", srC3)
+gSBtn.Size = UDim2.new(0, 42, 1, 0)
+gSBtn.Position = UDim2.new(1, -42, 0, 0)
+gSBtn.BackgroundColor3 = Theme.Primary
+gSBtn.TextColor3 = Theme.BG
+gSBtn.Font = Enum.Font.GothamBlack
+gSBtn.TextSize = 12
+gSBtn.Text = "GO"
+rC(gSBtn, 8) aP(gSBtn)
 
-local dragHandle = Instance.new("Frame", main)
-dragHandle.Size = UDim2.new(1, 0, 0, 50)
-dragHandle.BackgroundTransparency = 1
-dragHandle.Active = true
+local scG = Instance.new("ScrollingFrame", pg3)
+scG.Size = UDim2.new(0.92, 0, 1, -90)
+scG.BackgroundColor3 = Theme.BG
+scG.BackgroundTransparency = 1
+scG.BorderSizePixel = 0
+scG.ScrollBarThickness = 2
+scG.ScrollBarImageColor3 = Theme.Primary
+scG.AutomaticCanvasSize = Enum.AutomaticSize.Y
+local glL = Instance.new("UIListLayout", scG)
+glL.Padding = UDim.new(0, 8)
 
-local dragToggleMain, dragStartMain, startPosMain = false, nil, nil
-
-dragHandle.InputBegan:Connect(function(input) 
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then 
-        dragToggleMain = true
-        dragStartMain = input.Position
-        startPosMain = main.Position 
-    end 
-end)
-
-UserInputService.InputChanged:Connect(function(input) 
-    if dragToggleMain and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then 
-        local delta = input.Position - dragStartMain
-        main.Position = UDim2.new(startPosMain.X.Scale, startPosMain.X.Offset + delta.X, startPosMain.Y.Scale, startPosMain.Y.Offset + delta.Y) 
-    end 
-end)
-
-UserInputService.InputEnded:Connect(function(input) 
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then 
-        dragToggleMain = false 
-    end 
-end)
-
-local sidebar = Instance.new("Frame", main)
-sidebar.Size = UDim2.new(0, 160, 1, -30)
-sidebar.Position = UDim2.new(0, 15, 0, 15)
-sidebar.BackgroundColor3 = Theme.Surface
-sidebar.BackgroundTransparency = 0.3
-createCorner(sidebar, 8)
-createStroke(sidebar, Theme.Border)
-
-local titleTxt = Instance.new("TextLabel", sidebar)
-titleTxt.Size = UDim2.new(1, 0, 0, 30)
-titleTxt.Position = UDim2.new(0, 0, 0, 10)
-titleTxt.Text = "JOIN ANYONE"
-titleTxt.TextColor3 = Theme.Primary
-titleTxt.Font = Enum.Font.Code
-titleTxt.TextSize = 14
-titleTxt.BackgroundTransparency = 1
-applyGlitchEffect(titleTxt)
-
-local avatarFrame = Instance.new("Frame", sidebar)
-avatarFrame.Size = UDim2.new(0, 70, 0, 70)
-avatarFrame.Position = UDim2.new(0.5, -35, 0, 55)
-avatarFrame.BackgroundColor3 = Theme.Background
-createCorner(avatarFrame, 35)
-createStroke(avatarFrame, Theme.Primary, 2)
-
-local avatarImage = Instance.new("ImageLabel", avatarFrame)
-avatarImage.Size = UDim2.new(1, 0, 1, 0)
-avatarImage.BackgroundTransparency = 1
-avatarImage.Image = "rbxasset://textures/ui/GuiImagePlaceholder.png"
-createCorner(avatarImage, 35)
-applyGlitchEffect(avatarFrame)
-
-local snipeTabBtn = Instance.new("TextButton", sidebar)
-snipeTabBtn.Size = UDim2.new(0.8, 0, 0, 35)
-snipeTabBtn.Position = UDim2.new(0.1, 0, 0, 150)
-snipeTabBtn.BackgroundColor3 = Theme.Primary
-snipeTabBtn.TextColor3 = Theme.Background
-snipeTabBtn.Font = Enum.Font.GothamBold
-snipeTabBtn.TextSize = 12
-snipeTabBtn.Text = "🎯 SNIPER"
-createCorner(snipeTabBtn, 6)
-applyHover(snipeTabBtn, Color3.fromRGB(0, 200, 80))
-
-local browserTabBtn = Instance.new("TextButton", sidebar)
-browserTabBtn.Size = UDim2.new(0.8, 0, 0, 35)
-browserTabBtn.Position = UDim2.new(0.1, 0, 0, 195)
-browserTabBtn.BackgroundColor3 = Theme.Background
-browserTabBtn.TextColor3 = Theme.TextMuted
-browserTabBtn.Font = Enum.Font.GothamBold
-browserTabBtn.TextSize = 12
-browserTabBtn.Text = "🌐 BROWSER"
-createCorner(browserTabBtn, 6)
-createStroke(browserTabBtn, Theme.Border)
-applyHover(browserTabBtn, Theme.Surface)
-
-local connectorLine = Instance.new("Frame", main)
-connectorLine.Size = UDim2.new(0, 15, 0, 2)
-connectorLine.Position = UDim2.new(0, 175, 0, 181) 
-connectorLine.BackgroundColor3 = Theme.Primary
-connectorLine.BorderSizePixel = 0
-
-local contentPanel = Instance.new("Frame", main)
-contentPanel.Size = UDim2.new(1, -205, 1, -30)
-contentPanel.Position = UDim2.new(0, 190, 0, 15)
-contentPanel.BackgroundColor3 = Theme.Surface
-contentPanel.BackgroundTransparency = 0.3
-createCorner(contentPanel, 8)
-createStroke(contentPanel, Theme.Primary, 1)
-
-local snipePage = Instance.new("Frame", contentPanel)
-snipePage.Size = UDim2.new(1, 0, 1, 0)
-snipePage.BackgroundTransparency = 1
-
-local browserPage = Instance.new("Frame", contentPanel)
-browserPage.Size = UDim2.new(1, 0, 1, 0)
-browserPage.BackgroundTransparency = 1
-browserPage.Visible = false
-
-snipeTabBtn.MouseButton1Click:Connect(function() 
-    snipePage.Visible, browserPage.Visible = true, false
-    snipeTabBtn.BackgroundColor3, snipeTabBtn.TextColor3 = Theme.Primary, Theme.Background
-    browserTabBtn.BackgroundColor3, browserTabBtn.TextColor3 = Theme.Background, Theme.TextMuted
-    TweenService:Create(connectorLine, TweenInfo.new(0.3, Enum.EasingStyle.Quint), {Position = UDim2.new(0, 175, 0, 181)}):Play()
-end)
-
-browserTabBtn.MouseButton1Click:Connect(function() 
-    snipePage.Visible, browserPage.Visible = false, true
-    browserTabBtn.BackgroundColor3, browserTabBtn.TextColor3 = Theme.Primary, Theme.Background
-    snipeTabBtn.BackgroundColor3, snipeTabBtn.TextColor3 = Theme.Background, Theme.TextMuted
-    TweenService:Create(connectorLine, TweenInfo.new(0.3, Enum.EasingStyle.Quint), {Position = UDim2.new(0, 175, 0, 226)}):Play()
-end)
-
-local function CreateInputBox(parent, placeholder, yPos)
-    local bg = Instance.new("Frame", parent)
-    bg.Size = UDim2.new(0.9, 0, 0, 35)
-    bg.Position = UDim2.new(0.05, 0, 0, yPos)
-    bg.BackgroundColor3 = Theme.Background
-    createCorner(bg, 6)
-    local stroke = createStroke(bg, Theme.Border)
+local function uFG(q)
+    local e = urlE(q)
+    local url = "https://games.roblox.com/v1/games/list?model.keyword=" .. e .. "&model.maxRows=40"
     
-    local box = Instance.new("TextBox", bg)
-    box.Size = UDim2.new(1, -20, 1, 0)
-    box.Position = UDim2.new(0, 10, 0, 0)
-    box.BackgroundTransparency = 1
-    box.TextColor3 = Theme.Text
-    box.PlaceholderText = placeholder
-    box.PlaceholderColor3 = Theme.TextMuted
-    box.Font = Enum.Font.Code
-    box.TextSize = 12
-    box.TextXAlignment = Enum.TextXAlignment.Left
-    box.Text = ""
+    local s1, r1 = pcall(function() return httprequest({Url = url, Method = "GET"}) end)
+    if s1 and r1 and r1.Success then local d = safeDec(r1.Body) if d and d.games then return d end end
     
-    box.Focused:Connect(function() TweenService:Create(stroke, TweenInfo.new(0.2), {Color = Theme.Primary}):Play() end)
-    box.FocusLost:Connect(function() TweenService:Create(stroke, TweenInfo.new(0.2), {Color = Theme.Border}):Play() end)
+    local s2, r2 = pcall(function() return game:HttpGet(url) end)
+    if s2 and r2 and r2:sub(1,1) == "{" then local d = safeDec(r2) if d and d.games then return d end end
     
-    return box
-end
-
-local sTitle = Instance.new("TextLabel", snipePage)
-sTitle.Size = UDim2.new(0.9, 0, 0, 20)
-sTitle.Position = UDim2.new(0.05, 0, 0, 5)
-sTitle.Text = "// ACQUIRE TARGET"
-sTitle.TextColor3 = Theme.Primary
-sTitle.Font = Enum.Font.GothamBold
-sTitle.TextSize = 12
-sTitle.TextXAlignment = Enum.TextXAlignment.Left
-sTitle.BackgroundTransparency = 1
-
-local userBox = CreateInputBox(snipePage, "> Target Username or UserId", 25)
-local placeBox = CreateInputBox(snipePage, "> Place Id (Leave blank for current)", 65)
-local scanAmtBox = CreateInputBox(snipePage, "> Max Scan per Server (Blank = Full Server)", 105)
-
-local executeBtn = Instance.new("TextButton", snipePage)
-executeBtn.Size = UDim2.new(0.65, 0, 0, 35)
-executeBtn.Position = UDim2.new(0.05, 0, 0, 150)
-executeBtn.BackgroundColor3 = Theme.Background
-executeBtn.TextColor3 = Theme.Primary
-executeBtn.Font = Enum.Font.Code
-executeBtn.TextSize = 14
-executeBtn.Text = "EXECUTE"
-createCorner(executeBtn, 6)
-createStroke(executeBtn, Theme.Primary)
-applyHover(executeBtn, Color3.fromRGB(0, 40, 20))
-
-local clearBtn = Instance.new("TextButton", snipePage)
-clearBtn.Size = UDim2.new(0.22, 0, 0, 35)
-clearBtn.Position = UDim2.new(0.73, 0, 0, 150)
-clearBtn.BackgroundColor3 = Theme.Background
-clearBtn.TextColor3 = Theme.Error
-clearBtn.Font = Enum.Font.Code
-clearBtn.TextSize = 14
-clearBtn.Text = "CLEAR"
-createCorner(clearBtn, 6)
-createStroke(clearBtn, Theme.Error)
-applyHover(clearBtn, Color3.fromRGB(50, 10, 10))
-
-local logScroll = Instance.new("ScrollingFrame", snipePage)
-logScroll.Size = UDim2.new(0.9, 0, 0, 140)
-logScroll.Position = UDim2.new(0.05, 0, 0, 195)
-logScroll.BackgroundColor3 = Theme.Background
-logScroll.BorderSizePixel = 0
-logScroll.ScrollBarThickness = 2
-logScroll.ScrollBarImageColor3 = Theme.Primary
-createCorner(logScroll, 6)
-createStroke(logScroll, Theme.Border)
-
-local listLog = Instance.new("UIListLayout", logScroll)
-listLog.VerticalAlignment = Enum.VerticalAlignment.Bottom
-listLog.Padding = UDim.new(0, 2)
-
-local function AddLogEntry(text, color)
-    local entry = Instance.new("TextLabel", logScroll)
-    entry.Size = UDim2.new(1, -10, 0, 16)
-    entry.Position = UDim2.new(0, 5, 0, 0)
-    entry.Text = "> " .. text
-    entry.TextColor3 = color or Theme.TextMuted
-    entry.Font = Enum.Font.Code
-    entry.TextSize = 11
-    entry.TextXAlignment = Enum.TextXAlignment.Left
-    entry.BackgroundTransparency = 1
-    task.spawn(function() 
-        for i=1,3 do 
-            entry.Visible = false
-            task.wait(0.04)
-            entry.Visible = true
-            task.wait(0.04) 
-        end 
-    end)
-    applyGlitchEffect(entry)
-    logScroll.CanvasPosition = Vector2.new(0, 9999)
-end
-
-clearBtn.MouseButton1Click:Connect(function()
-    for _, child in ipairs(logScroll:GetChildren()) do
-        if child:IsA("TextLabel") then child:Destroy() end
+    local eps = {
+        "https://games.roproxy.com/v1/games/list?model.keyword=" .. e .. "&model.maxRows=40",
+        "https://corsproxy.io/?https%3A%2F%2Fgames.roblox.com%2Fv1%2Fgames%2Flist%3Fmodel.keyword%3D" .. e .. "%26model.maxRows%3D40"
+    }
+    for _, ep in ipairs(eps) do
+        local s3, r3 = pcall(function() return game:HttpGet(ep) end)
+        if s3 and r3 and r3:sub(1,1) == "{" then local d = safeDec(r3) if d and d.games then return d end end
     end
-end)
-
-local bTitle = Instance.new("TextLabel", browserPage)
-bTitle.Size = UDim2.new(0.9, 0, 0, 20)
-bTitle.Position = UDim2.new(0.05, 0, 0, 5)
-bTitle.Text = "// NETWORK NODES"
-bTitle.TextColor3 = Theme.Primary
-bTitle.Font = Enum.Font.GothamBold
-bTitle.TextSize = 12
-bTitle.TextXAlignment = Enum.TextXAlignment.Left
-bTitle.BackgroundTransparency = 1
-
-local bPlaceBox = CreateInputBox(browserPage, "> Place Id (Optional)", 25)
-bPlaceBox.Parent.Size = UDim2.new(0.75, 0, 0, 30)
-
-local refreshBtn = Instance.new("ImageButton", browserPage)
-refreshBtn.Size = UDim2.new(0, 40, 0, 30)
-refreshBtn.Position = UDim2.new(0.8, 0, 0, 25)
-refreshBtn.BackgroundColor3 = Theme.Background
-refreshBtn.Image = "rbxassetid://6031094670"
-refreshBtn.ImageColor3 = Theme.Primary
-createCorner(refreshBtn, 6)
-createStroke(refreshBtn, Theme.Primary)
-applyHover(refreshBtn, Theme.Surface)
-
-local bFindBox = CreateInputBox(browserPage, "> Find Player (Username/ID)", 60)
-bFindBox.Parent.Size = UDim2.new(0.75, 0, 0, 30)
-
-local bFindBtn = Instance.new("TextButton", browserPage)
-bFindBtn.Size = UDim2.new(0, 40, 0, 30)
-bFindBtn.Position = UDim2.new(0.8, 0, 0, 60)
-bFindBtn.BackgroundColor3 = Theme.Background
-bFindBtn.TextColor3 = Theme.Primary
-bFindBtn.Font = Enum.Font.GothamBold
-bFindBtn.TextSize = 11
-bFindBtn.Text = "FIND"
-createCorner(bFindBtn, 6)
-createStroke(bFindBtn, Theme.Primary)
-applyHover(bFindBtn, Color3.fromRGB(0, 40, 20))
-
-local filterContainer = Instance.new("Frame", browserPage)
-filterContainer.Size = UDim2.new(0.9, 0, 0, 20)
-filterContainer.Position = UDim2.new(0.05, 0, 0, 95)
-filterContainer.BackgroundTransparency = 1
-
-local FILTERS = {"All", "Low Ping", "Small", "Large"}
-local filterBtns = {}
-local currentFilter = "All"
-local fw = 1 / #FILTERS
-
-for i, f in ipairs(FILTERS) do
-    local fBtn = Instance.new("TextButton", filterContainer)
-    fBtn.Size = UDim2.new(fw, -4, 1, 0)
-    fBtn.Position = UDim2.new(fw * (i-1), 2, 0, 0)
-    fBtn.BackgroundColor3 = (i==1) and Theme.Primary or Theme.Background
-    fBtn.TextColor3 = (i==1) and Theme.Background or Theme.TextMuted
-    fBtn.Font = Enum.Font.Code
-    fBtn.TextSize = 10
-    fBtn.Text = string.upper(f)
-    createCorner(fBtn, 4)
-    createStroke(fBtn, Theme.Border)
-    filterBtns[f] = fBtn
+    return nil
 end
 
-local sList = Instance.new("ScrollingFrame", browserPage)
-sList.Size = UDim2.new(0.9, 0, 0, 180)
-sList.Position = UDim2.new(0.05, 0, 0, 120)
-sList.BackgroundColor3 = Theme.Background
-sList.BackgroundTransparency = 1
-sList.BorderSizePixel = 0
-sList.ScrollBarThickness = 2
-sList.ScrollBarImageColor3 = Theme.Primary
-
-local listLayout = Instance.new("UIListLayout", sList)
-listLayout.Padding = UDim.new(0, 6)
-
-local pControls = Instance.new("Frame", browserPage)
-pControls.Size = UDim2.new(0.9, 0, 0, 30)
-pControls.Position = UDim2.new(0.05, 0, 0, 310)
-pControls.BackgroundTransparency = 1
-
-local prevBtn = Instance.new("TextButton", pControls)
-prevBtn.Size = UDim2.new(0.25, 0, 1, 0)
-prevBtn.BackgroundColor3 = Theme.Background
-prevBtn.TextColor3 = Theme.Text
-prevBtn.Font = Enum.Font.Code
-prevBtn.TextSize = 12
-prevBtn.Text = "< BACK"
-createCorner(prevBtn, 6)
-createStroke(prevBtn, Theme.Border)
-applyHover(prevBtn, Theme.Surface)
-
-local nextBtn = Instance.new("TextButton", pControls)
-nextBtn.Size = UDim2.new(0.25, 0, 1, 0)
-nextBtn.Position = UDim2.new(0.75, 0, 0, 0)
-nextBtn.BackgroundColor3 = Theme.Background
-nextBtn.TextColor3 = Theme.Text
-nextBtn.Font = Enum.Font.Code
-nextBtn.TextSize = 12
-nextBtn.Text = "NEXT >"
-createCorner(nextBtn, 6)
-createStroke(nextBtn, Theme.Border)
-applyHover(nextBtn, Theme.Surface)
-
-local pLabel = Instance.new("TextLabel", pControls)
-pLabel.Size = UDim2.new(0.5, 0, 1, 0)
-pLabel.Position = UDim2.new(0.25, 0, 0, 0)
-pLabel.BackgroundTransparency = 1
-pLabel.TextColor3 = Theme.Primary
-pLabel.Font = Enum.Font.Code
-pLabel.TextSize = 12
-pLabel.Text = "PAGE 1 / 1"
-
-local function getTargetThumbDirect(userId)
-    local s, r = pcall(function() return game:HttpGet("https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=" .. userId .. "&format=Png&size=150x150&isCircular=false") end)
-    if s and r and r:sub(1,1) == "{" then 
-        local data = safeJSONDecode(r)
-        if data and data.data and data.data[1] then return data.data[1].imageUrl end 
-    end
+local function gTTD(id)
+    local s, r = pcall(function() return game:HttpGet("https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=" .. id .. "&format=Png&size=150x150&isCircular=false") end)
+    if s and r and r:sub(1,1) == "{" then local d = safeDec(r) if d and d.data and d.data[1] then return d.data[1].imageUrl end end
     return ""
 end
 
-local function getServersDirect(id, cursor)
-    local fullurl = "https://games.roblox.com/v1/games/".. id .."/servers/Public?limit=100" .. (cursor and "&cursor="..cursor or "")
-    local s, r = pcall(function() return game:HttpGet(fullurl) end)
-    if s and r and r:sub(1,1) == "{" then 
-        local dec = safeJSONDecode(r)
-        if dec then return true, dec end 
-    end
+local function gSD(id, c)
+    local url = "https://games.roblox.com/v1/games/".. id .."/servers/Public?limit=100" .. (c and "&cursor="..c or "")
+    local s, r = pcall(function() return game:HttpGet(url) end)
+    if s and r and r:sub(1,1) == "{" then local d = safeDec(r) if d then return true, d end end
     return false, nil
 end
 
-local function fetchThumbsDirectChunked(tokens)
-    local allThumbs = {}
-    for i = 1, #tokens, 100 do
-        local chunk = {unpack(tokens, i, math.min(i + 99, #tokens))}
-        local payload = { Url = "https://thumbnails.roblox.com/v1/batch", Headers = { ["Content-Type"] = "application/json" }, Method = "POST", Body = {} }
-        for _, token in ipairs(chunk) do 
-            table.insert(payload.Body, {requestId = "0:"..token..":AvatarHeadshot:150x150:png:regular", type = "AvatarHeadShot", targetId = 0, token = token, format = "png", size = "150x150"}) 
+local function fTDC(tk)
+    local aT = {}
+    for i = 1, #tk, 100 do
+        local c = {unpack(tk, i, math.min(i + 99, #tk))}
+        local p = { Url = "https://thumbnails.roblox.com/v1/batch", Headers = { ["Content-Type"] = "application/json" }, Method = "POST", Body = {} }
+        for _, t in ipairs(c) do table.insert(p.Body, {requestId = "0:"..t..":AvatarHeadshot:150x150:png:regular", type = "AvatarHeadShot", targetId = 0, token = t, format = "png", size = "150x150"}) end
+        local sE, eB = pcall(function() return HttpService:JSONEncode(p.Body) end)
+        if sE then
+            p.Body = eB
+            local s, r = pcall(function() return httprequest(p) end)
+            if s and r and r.Success then local d = safeDec(r.Body) if d and d.data then for _, v in ipairs(d.data) do table.insert(aT, v) end end end
         end
-        local sEnc, encBody = pcall(function() return HttpService:JSONEncode(payload.Body) end)
-        if sEnc then
-            payload.Body = encBody
-            local success, result = pcall(function() return httprequest(payload) end)
-            if success and result and result.Success then 
-                local dec = safeJSONDecode(result.Body)
-                if dec and dec.data then 
-                    for _, v in ipairs(dec.data) do table.insert(allThumbs, v) end 
-                end
+    end
+    if #aT > 0 then return true, aT end
+    return false, nil
+end
+
+local gID = game.PlaceId
+local function syID(id)
+    if not id or tostring(id):gsub("%s", "") == "" then gID = game.PlaceId pBx.Text = "" bpBx.Text = "" else gID = tonumber(id) or game.PlaceId pBx.Text = tostring(gID) bpBx.Text = tostring(gID) end
+end
+pBx.FocusLost:Connect(function() syID(pBx.Text) end)
+bpBx.FocusLost:Connect(function() syID(bpBx.Text) end)
+
+gSBtn.MouseButton1Click:Connect(function()
+    local q = gBx.Text
+    if q == "" then return end
+    local qL = string.lower(q)
+    for _, c in ipairs(scG:GetChildren()) do if c:IsA("Frame") or c:IsA("TextLabel") then c:Destroy() end end
+    gSBtn.Text = "..."
+    task.spawn(function()
+        local d = uFG(q)
+        if d and d.games then
+            local vG = {}
+            for _, g in ipairs(d.games) do
+                local gN = string.lower(g.name or "")
+                if (g.playerCount and g.playerCount > 0) and string.find(gN, qL, 1, true) then table.insert(vG, g) end
             end
-        end
-    end
-    if #allThumbs > 0 then return true, allThumbs end
-    return false, nil
-end
+            table.sort(vG, function(a,b) return (a.playerCount or 0) > (b.playerCount or 0) end)
+            local dC = math.min(#vG, 15)
+            if dC > 0 then
+                for i = 1, dC do
+                    local g = vG[i]
+                    local iM = Instance.new("Frame", scG)
+                    iM.Size = UDim2.new(1, 0, 0, 64)
+                    iM.BackgroundColor3 = Theme.Item
+                    rC(iM, 8) rS(iM, Theme.Border, 1.5)
+                    
+                    local dt = Instance.new("Frame", iM)
+                    dt.Size = UDim2.new(0, 4, 0.5, 0)
+                    dt.Position = UDim2.new(0, 0, 0.25, 0)
+                    dt.BackgroundColor3 = Theme.Primary
+                    rC(dt, 2)
+                    
+                    local nT = string.sub(g.name, 1, 28) .. (string.len(g.name) > 28 and "..." or "")
+                    local cName = g.creatorName or "Unknown"
+                    local inf = Instance.new("TextLabel", iM)
+                    inf.Size = UDim2.new(1, -110, 1, 0)
+                    inf.Position = UDim2.new(0, 15, 0, 0)
+                    inf.BackgroundTransparency = 1
+                    inf.TextXAlignment = Enum.TextXAlignment.Left
+                    inf.TextColor3 = Theme.Text
+                    inf.Font = Enum.Font.Code
+                    inf.TextSize = 13
+                    inf.Text = string.format("%s\n<font color='#%s' size='11'>ID: %s | BY: %s</font>\n<font color='#%s' size='11'>PLAYERS: %d</font>", nT, Theme.SubText:ToHex(), tostring(g.placeId), cName, Theme.Primary:ToHex(), g.playerCount or 0)
+                    inf.RichText = true
+                    
+                    local cb = Instance.new("TextButton", iM)
+                    cb.Size = UDim2.new(0, 42, 0, 26)
+                    cb.Position = UDim2.new(1, -94, 0.5, -13)
+                    cb.BackgroundColor3 = Theme.BG
+                    cb.TextColor3 = Theme.Primary
+                    cb.Font = Enum.Font.Code
+                    cb.TextSize = 10
+                    cb.Text = "COPY"
+                    rC(cb, 6) rS(cb, Theme.Primary, 1) aP(cb) aH(cb, Color3.fromRGB(0, 40, 20))
+                    cb.MouseButton1Click:Connect(function() set_clipboard(tostring(g.placeId)) cb.Text = "OK" task.wait(1) cb.Text = "COPY" end)
 
-userBox.FocusLost:Connect(function()
-    local t = userBox.Text
-    if t ~= "" then 
-        task.spawn(function() 
-            local s, id = pcall(function() return tonumber(t) or Players:GetUserIdFromNameAsync(t) end) 
-            if s and id then avatarImage.Image = "rbxthumb://type=AvatarHeadShot&id=" .. id .. "&w=150&h=150" end 
-        end) 
-    else 
-        avatarImage.Image = "rbxasset://textures/ui/GuiImagePlaceholder.png" 
-    end
+                    local sb = Instance.new("TextButton", iM)
+                    sb.Size = UDim2.new(0, 42, 0, 26)
+                    sb.Position = UDim2.new(1, -48, 0.5, -13)
+                    sb.BackgroundColor3 = Theme.Primary
+                    sb.TextColor3 = Theme.BG
+                    sb.Font = Enum.Font.GothamBlack
+                    sb.TextSize = 10
+                    sb.Text = "SET"
+                    rC(sb, 6) aP(sb)
+                    sb.MouseButton1Click:Connect(function() syID(g.placeId) sb.Text = "SET!" task.wait(1) sb.Text = "SET" end)
+                end
+            else
+                local em = Instance.new("TextLabel", scG) em.Size = UDim2.new(1, 0, 0, 50) em.BackgroundTransparency = 1 em.TextColor3 = Theme.SubText em.Font = Enum.Font.Code em.TextSize = 13 em.Text = "NULL"
+            end
+        else
+            local em = Instance.new("TextLabel", scG) em.Size = UDim2.new(1, 0, 0, 50) em.BackgroundTransparency = 1 em.TextColor3 = Theme.Danger em.Font = Enum.Font.Code em.TextSize = 13 em.Text = "API_ERR_PROXY_BLOCKED"
+        end
+        gSBtn.Text = "GO"
+    end)
 end)
 
-local snipeSearching = false
+uBx.FocusLost:Connect(function()
+    local t = uBx.Text
+    if t ~= "" then task.spawn(function() local s, id = pcall(function() return tonumber(t) or Players:GetUserIdFromNameAsync(t) end) if s and id then aImg.Image = "rbxthumb://type=AvatarHeadShot&id=" .. id .. "&w=150&h=150" end end) else aImg.Image = "rbxasset://textures/ui/GuiImagePlaceholder.png" end
+end)
 
-executeBtn.MouseButton1Click:Connect(function()
-    if confirm then 
-        confirm = false
-        snipeSearching = false
-        executeBtn.Text = "EXECUTE"
-        AddLogEntry("Sequence Aborted.", Theme.Error)
-        return 
-    end
-    
-    if snipeSearching then 
-        confirm = true
-        local old = executeBtn.Text
-        executeBtn.Text = "CONFIRM?"
-        AddLogEntry("Awaiting abort confirm...", Theme.Warning)
-        task.delay(4, function() 
-            if executeBtn.Text == "CONFIRM?" then 
-                confirm = false
-                executeBtn.Text = old 
-            end 
-        end)
-        return 
-    end
-    
-    snipeSearching = true
-    executeBtn.Text = "ABORT"
-    AddLogEntry("Initializing Protocol...", Theme.Primary)
-    
-    local username = userBox.Text
-    local s, userId = pcall(function() return tonumber(username) or Players:GetUserIdFromNameAsync(username) end)
-    
-    if not s or not userId then 
-        snipeSearching = false
-        executeBtn.Text = "EXECUTE"
-        AddLogEntry("Error: Target ID unresolvable.", Theme.Error)
-        return 
-    end
-    
-    avatarImage.Image = "rbxthumb://type=AvatarHeadShot&id=" .. userId .. "&w=150&h=150"
-    
-    local thumbnail = getTargetThumbDirect(userId)
-    if thumbnail == "" then 
-        snipeSearching = false
-        executeBtn.Text = "EXECUTE"
-        AddLogEntry("Direct Fetch Blocked.", Theme.Error)
-        return 
-    end
-    
-    AddLogEntry("Target Locked: " .. userId, Theme.Primary)
-    
-    local placeId = tonumber(placeBox.Text)
-    if placeBox.Text:gsub("%s", "") == "" then 
-        placeId = game.PlaceId 
-    elseif not placeId then 
-        snipeSearching = false
-        executeBtn.Text = "EXECUTE"
-        AddLogEntry("Invalid Place ID.", Theme.Error)
-        return 
-    end
-    
-    local maxScanAmt = tonumber(scanAmtBox.Text)
-    if not maxScanAmt or maxScanAmt <= 0 then maxScanAmt = 9999 end
-    
-    local cursor, searched, playersCount = nil, 0, 0
-    
+local sS = false
+local cf = false
+
+eBtn.MouseButton1Click:Connect(function()
+    if cf then cf = false sS = false eBtn.Text = "EXECUTE" aL("Aborted.", Theme.Danger) return end
+    if sS then cf = true local o = eBtn.Text eBtn.Text = "SURE?" aL("Awaiting confirm...", Theme.Danger) task.delay(3, function() if eBtn.Text == "SURE?" then cf = false eBtn.Text = o end end) return end
+    sS = true eBtn.Text = "ABORT" aL("Booting Protocol...", Theme.Primary)
+    local u = uBx.Text
+    local s, uid = pcall(function() return tonumber(u) or Players:GetUserIdFromNameAsync(u) end)
+    if not s or not uid then sS = false eBtn.Text = "EXECUTE" aL("Invalid UID.", Theme.Danger) return end
+    aImg.Image = "rbxthumb://type=AvatarHeadShot&id=" .. uid .. "&w=150&h=150"
+    local th = gTTD(uid)
+    if th == "" then sS = false eBtn.Text = "EXECUTE" aL("API Blocked.", Theme.Danger) return end
+    aL("Locked UID: " .. uid, Theme.Primary)
+    local pId = gID
+    local mS = tonumber(sBx.Text) if not mS or mS <= 0 then mS = 9999 end
+    local cr, sr, pC = nil, 0, 0
     task.spawn(function()
-        while snipeSearching do
-            local successFetch, result = getServersDirect(placeId, cursor)
-            if successFetch and result and result.data then
-                local servers = result.data
-                cursor = result.nextPageCursor
-                for index, server in ipairs(servers) do
-                    if not snipeSearching then break end
+        while sS do
+            local sF, res = gSD(pId, cr)
+            if sF and res and res.data then
+                local svs = res.data cr = res.nextPageCursor
+                for idx, sv in ipairs(svs) do
+                    if not sS then break end
                     task.spawn(function()
-                        if server.playerTokens and #server.playerTokens > 0 then
-                            local tokensToScan = {}
-                            for i = 1, math.min(#server.playerTokens, maxScanAmt) do table.insert(tokensToScan, server.playerTokens[i]) end
-                            if #tokensToScan > 0 then
-                                local sThumb, thumbs = fetchThumbsDirectChunked(tokensToScan)
-                                if sThumb and thumbs then 
-                                    playersCount = playersCount + #thumbs
-                                    for _, pTh in ipairs(thumbs) do 
-                                        if pTh.imageUrl and pTh.imageUrl == thumbnail then 
-                                            snipeSearching = false
-                                            AddLogEntry("MATCH FOUND! TELEPORTING...", Theme.Primary)
-                                            TeleportService:TeleportToPlaceInstance(placeId, server.id, Players.LocalPlayer)
-                                            return 
-                                        end 
-                                    end 
-                                end
+                        if sv.playerTokens and #sv.playerTokens > 0 then
+                            local tkS = {}
+                            for i = 1, math.min(#sv.playerTokens, mS) do table.insert(tkS, sv.playerTokens[i]) end
+                            if #tkS > 0 then
+                                local sth, ths = fTDC(tkS)
+                                if sth and ths then pC = pC + #ths for _, pt in ipairs(ths) do if pt.imageUrl and pt.imageUrl == th then sS = false aL("NODE FOUND! HYPERLINKING...", Theme.Primary) TeleportService:TeleportToPlaceInstance(pId, sv.id, Players.LocalPlayer) return end end end
                             end
                         end
                     end)
-                    searched = searched + 1
-                    AddLogEntry(string.format("Nodes: %d | Entities: %d", searched, playersCount), Theme.TextMuted)
-                    if index % 30 ~= 0 then task.wait() end
+                    sr = sr + 1 aL(string.format("Nodes: %03d | IDs: %04d", sr, pC), Theme.SubText) if idx % 30 ~= 0 then task.wait() end
                 end
-                if not cursor then break end
-            else 
-                AddLogEntry("Rate Limit. Delaying 2s...", Theme.TextMuted)
-                task.wait(2) 
-            end
+                if not cr then break end
+            else aL("Rate Limit...", Theme.Danger) task.wait(2) end
             task.wait()
         end
-        if snipeSearching then 
-            snipeSearching = false
-            executeBtn.Text = "EXECUTE"
-            AddLogEntry("Search exhausted. Target missing.", Theme.Error) 
-        end
+        if sS then sS = false eBtn.Text = "EXECUTE" aL("Target Ghosted.", Theme.Danger) end
     end)
 end)
 
-local allServersData = {}
-local filteredServersData = {}
-local currentBrowserPage = 1
+local aSv = {}
+local fSv = {}
+local cPge = 1
 
-local function getPingColor(ping)
-    if ping <= 80 then return Theme.Primary elseif ping <= 150 then return Theme.Warning else return Theme.Error end
+local function gPC(p) if p <= 80 then return Theme.Primary elseif p <= 150 then return Color3.fromRGB(255, 200, 50) else return Theme.Danger end end
+
+local function rBP(pg)
+    for _, c in ipairs(scB:GetChildren()) do if c:IsA("Frame") then c:Destroy() end end
+    local tS = #fSv local mP = math.max(1, math.ceil(tS / 10)) if pg > mP then pg = mP end if pg < 1 then pg = 1 end cPge = pg
+    pLb.Text = string.format("PAGE %d / %d", cPge, mP)
+    if tS == 0 then local em = Instance.new("TextLabel", scB) em.Size = UDim2.new(1, 0, 0, 50) em.BackgroundTransparency = 1 em.TextColor3 = Theme.SubText em.Font = Enum.Font.Code em.TextSize = 13 em.Text = "NULL" return end
+    local sI = (pg - 1) * 10 + 1 local eI = math.min(sI + 9, tS) local pId = gID
+    for i = sI, eI do
+        local sv = fSv[i]
+        local iM = Instance.new("Frame", scB)
+        iM.Size = UDim2.new(1, 0, 0, 58)
+        iM.BackgroundColor3 = Theme.Item
+        rC(iM, 8) rS(iM, Theme.Border, 1.5)
+        
+        local pV = sv.ping or 999
+        local inf = Instance.new("TextLabel", iM)
+        inf.Size = UDim2.new(1, -110, 1, 0)
+        inf.Position = UDim2.new(0, 15, 0, 0)
+        inf.BackgroundTransparency = 1
+        inf.TextXAlignment = Enum.TextXAlignment.Left
+        inf.TextColor3 = Theme.Text
+        inf.Font = Enum.Font.Code
+        inf.TextSize = 13
+        inf.Text = string.format("NODE_%s\n<font color='#%s' size='11'>USR: %d/%d | PING: <font color='#%s'>%dms</font></font>", string.sub(sv.id, 1, 6), Theme.SubText:ToHex(), sv.playing or 0, sv.maxPlayers or 0, gPC(pV):ToHex(), pV)
+        inf.RichText = true
+        
+        local dt = Instance.new("Frame", iM)
+        dt.Size = UDim2.new(0, 4, 0.5, 0)
+        dt.Position = UDim2.new(0, 0, 0.25, 0)
+        dt.BackgroundColor3 = gPC(pV)
+        rC(dt, 2)
+        
+        local cb = Instance.new("TextButton", iM)
+        cb.Size = UDim2.new(0, 42, 0, 26)
+        cb.Position = UDim2.new(1, -94, 0.5, -13)
+        cb.BackgroundColor3 = Theme.BG
+        cb.TextColor3 = Theme.Primary
+        cb.Font = Enum.Font.Code
+        cb.TextSize = 10
+        cb.Text = "COPY"
+        rC(cb, 6) rS(cb, Theme.Primary, 1) aP(cb) aH(cb, Color3.fromRGB(0, 40, 20))
+        cb.MouseButton1Click:Connect(function() set_clipboard(tostring(sv.id)) cb.Text = "OK" task.wait(1) cb.Text = "COPY" end)
+
+        local jb = Instance.new("TextButton", iM)
+        jb.Size = UDim2.new(0, 42, 0, 26)
+        jb.Position = UDim2.new(1, -48, 0.5, -13)
+        jb.BackgroundColor3 = Theme.Primary
+        jb.TextColor3 = Theme.BG
+        jb.Font = Enum.Font.GothamBlack
+        jb.TextSize = 10
+        jb.Text = "JOIN"
+        rC(jb, 6) aP(jb)
+        jb.MouseButton1Click:Connect(function() TeleportService:TeleportToPlaceInstance(pId, sv.id, Players.LocalPlayer) end)
+    end
 end
 
-local function renderBrowserPage(page)
-    for _, child in ipairs(sList:GetChildren()) do 
-        if child:IsA("Frame") then child:Destroy() end 
+local function aFi()
+    fSv = {}
+    for _, s in ipairs(aSv) do
+        local p = s.playing or 0 local m = math.max(s.maxPlayers or 1, 1) local pg = s.ping or 999 local r = p / m
+        if cF == "All" then table.insert(fSv, s)
+        elseif cF == "Low Ping" then if pg <= 80 then table.insert(fSv, s) end
+        elseif cF == "Small" then if r < 0.3 then table.insert(fSv, s) end
+        elseif cF == "Large" then if p < m and p > 0 then table.insert(fSv, s) end end
     end
-    
-    local totalServers = #filteredServersData
-    local maxPages = math.max(1, math.ceil(totalServers / 10))
-    if page > maxPages then page = maxPages end
-    if page < 1 then page = 1 end
-    currentBrowserPage = page
-    
-    pLabel.Text = string.format("PAGE %d / %d", currentBrowserPage, maxPages)
-    
-    if totalServers == 0 then
-        local empty = Instance.new("TextLabel", sList)
-        empty.Size = UDim2.new(1, 0, 0, 50)
-        empty.BackgroundTransparency = 1
-        empty.TextColor3 = Theme.TextMuted
-        empty.Font = Enum.Font.Code
-        empty.TextSize = 12
-        empty.Text = "NO SERVERS FOUND."
-        return
-    end
-    
-    local startIndex = (page - 1) * 10 + 1
-    local endIndex = math.min(startIndex + 9, totalServers)
-    local pId = tonumber(bPlaceBox.Text) or game.PlaceId
-    
-    for i = startIndex, endIndex do
-        local srv = filteredServersData[i]
-        local item = Instance.new("Frame", sList)
-        item.Size = UDim2.new(1, -10, 0, 45)
-        item.BackgroundColor3 = Theme.Background
-        createCorner(item, 6)
-        createStroke(item, Theme.Border)
-        
-        local info = Instance.new("TextLabel", item)
-        info.Size = UDim2.new(0.6, 0, 1, 0)
-        info.Position = UDim2.new(0, 15, 0, 0)
-        info.BackgroundTransparency = 1
-        info.TextXAlignment = Enum.TextXAlignment.Left
-        info.TextColor3 = Theme.Text
-        info.Font = Enum.Font.Code
-        info.TextSize = 11
-        
-        local pingVal = srv.ping or 999
-        info.Text = string.format("ID: %s...\nUsers: %d / %d | Ping: %sms", string.sub(srv.id, 1, 8), srv.playing or 0, srv.maxPlayers or 0, tostring(pingVal))
-        
-        local pingIndicator = Instance.new("Frame", item)
-        pingIndicator.Size = UDim2.new(0, 4, 0, 20)
-        pingIndicator.Position = UDim2.new(0, 4, 0.5, -10)
-        pingIndicator.BackgroundColor3 = getPingColor(pingVal)
-        pingIndicator.BorderSizePixel = 0
-        createCorner(pingIndicator, 2)
-
-        local copyBtn = Instance.new("TextButton", item)
-        copyBtn.Size = UDim2.new(0, 40, 0, 25)
-        copyBtn.Position = UDim2.new(1, -95, 0.5, -12.5)
-        copyBtn.BackgroundColor3 = Theme.Background
-        copyBtn.TextColor3 = Theme.Secondary
-        copyBtn.Font = Enum.Font.Code
-        copyBtn.TextSize = 9
-        copyBtn.Text = "COPY"
-        createCorner(copyBtn, 4)
-        createStroke(copyBtn, Theme.Secondary)
-        applyHover(copyBtn, Theme.Surface)
-        
-        copyBtn.MouseButton1Click:Connect(function() 
-            set_clipboard(tostring(srv.id))
-            copyBtn.Text = "COPIED!"
-            task.wait(1)
-            copyBtn.Text = "COPY" 
-        end)
-
-        local joinSrvBtn = Instance.new("TextButton", item)
-        joinSrvBtn.Size = UDim2.new(0, 40, 0, 25)
-        joinSrvBtn.Position = UDim2.new(1, -50, 0.5, -12.5)
-        joinSrvBtn.BackgroundColor3 = Theme.Primary
-        joinSrvBtn.TextColor3 = Theme.Background
-        joinSrvBtn.Font = Enum.Font.GothamBold
-        joinSrvBtn.TextSize = 10
-        joinSrvBtn.Text = "JOIN"
-        createCorner(joinSrvBtn, 4)
-        applyHover(joinSrvBtn, Color3.fromRGB(0, 200, 80))
-        
-        joinSrvBtn.MouseButton1Click:Connect(function() 
-            TeleportService:TeleportToPlaceInstance(pId, srv.id, Players.LocalPlayer) 
-        end)
-    end
-    sList.CanvasSize = UDim2.new(0, 0, 0, listLayout.AbsoluteContentSize.Y + 5)
+    if cF == "Low Ping" then table.sort(fSv, function(a,b) return (a.ping or 999) < (b.ping or 999) end)
+    elseif cF == "Small" then table.sort(fSv, function(a,b) return (a.playing or 0) < (b.playing or 0) end)
+    elseif cF == "Large" then table.sort(fSv, function(a,b) return (a.playing or 0) > (b.playing or 0) end)
+    else table.sort(fSv, function(a,b) return (a.playing or 0) > (b.playing or 0) end) end
+    rBP(1)
 end
 
-local function applyFilters()
-    filteredServersData = {}
-    for _, s in ipairs(allServersData) do
-        local playing = s.playing or 0
-        local maxP = math.max(s.maxPlayers or 1, 1)
-        local ping = s.ping or 999
-        local ratio = playing / maxP
-        
-        if currentFilter == "All" then table.insert(filteredServersData, s)
-        elseif currentFilter == "Low Ping" then if ping <= 80 then table.insert(filteredServersData, s) end
-        elseif currentFilter == "Small" then if ratio < 0.3 then table.insert(filteredServersData, s) end
-        elseif currentFilter == "Large" then if ratio >= 0.75 and playing < maxP then table.insert(filteredServersData, s) end end
-    end
-    
-    if currentFilter == "Low Ping" then 
-        table.sort(filteredServersData, function(a,b) return (a.ping or 999) < (b.ping or 999) end)
-    elseif currentFilter == "Small" then 
-        table.sort(filteredServersData, function(a,b) return (a.playing or 0) < (b.playing or 0) end)
-    elseif currentFilter == "Large" then 
-        table.sort(filteredServersData, function(a,b) return (a.playing or 0) > (b.playing or 0) end)
-    else 
-        table.sort(filteredServersData, function(a,b) return (a.playing or 0) > (b.playing or 0) end) 
-    end
-    
-    renderBrowserPage(1)
-end
-
-for fName, fBtn in pairs(filterBtns) do
-    fBtn.MouseButton1Click:Connect(function()
-        currentFilter = fName
-        for n, b in pairs(filterBtns) do 
-            b.BackgroundColor3 = (n == fName) and Theme.Primary or Theme.Background
-            b.TextColor3 = (n == fName) and Theme.Background or Theme.TextMuted 
-        end
-        applyFilters()
+for fN, fB in pairs(fBts) do
+    fB.MouseButton1Click:Connect(function()
+        cF = fN
+        for n, b in pairs(fBts) do TweenService:Create(b, TweenInfo.new(0.2), {BackgroundColor3 = (n == fN) and Theme.Primary or Theme.Item, TextColor3 = (n == fN) and Theme.BG or Theme.SubText}):Play() end
+        aFi()
     end)
 end
 
-local function turboLoadServers()
-    allServersData = {}
-    filteredServersData = {}
-    for _, child in ipairs(sList:GetChildren()) do 
-        if child:IsA("Frame") or child:IsA("TextLabel") then child:Destroy() end 
-    end
-    
-    local pId = tonumber(bPlaceBox.Text) or game.PlaceId
-    pLabel.Text = "HACKING NETWORK..."
-    
+local function tLS()
+    aSv = {} fSv = {}
+    for _, c in ipairs(scB:GetChildren()) do if c:IsA("Frame") or c:IsA("TextLabel") then c:Destroy() end end
+    local pId = gID
+    pLb.Text = "HACKING..."
     task.spawn(function()
-        local seen = {}
-        local function fetchPageDir(sort, maxPg)
-            local cursor, pages = "", 0
-            repeat
-                local url = "https://games.roblox.com/v1/games/" .. pId .. "/servers/Public?sortOrder=" .. sort .. "&limit=100" .. (cursor ~= "" and "&cursor=" .. cursor or "")
-                local ok, r = pcall(function() return game:HttpGet(url) end)
-                if ok and r and r:sub(1,1) == "{" then
-                    local data = safeJSONDecode(r)
-                    if data and data.data then
-                        for _, srv in ipairs(data.data) do 
-                            if not seen[srv.id] then 
-                                seen[srv.id] = true
-                                table.insert(allServersData, srv) 
-                            end 
-                        end
-                        cursor = data.nextPageCursor or ""
-                    else 
-                        break 
-                    end
-                else 
-                    break 
-                end
-                pages = pages + 1
-            until cursor == "" or pages >= maxPg
-        end
-        
-        fetchPageDir("Desc", 3)
-        fetchPageDir("Asc", 3)
-        applyFilters()
+        local sn = {} local function fPD(s, m) local c, p = "", 0 repeat local u = "https://games.roblox.com/v1/games/" .. pId .. "/servers/Public?sortOrder=" .. s .. "&limit=100" .. (c ~= "" and "&cursor=" .. c or "") local ok, r = pcall(function() return game:HttpGet(u) end) if ok and r and r:sub(1,1) == "{" then local d = safeDec(r) if d and d.data then for _, sv in ipairs(d.data) do if not sn[sv.id] then sn[sv.id] = true table.insert(aSv, sv) end end c = d.nextPageCursor or "" else break end else break end p = p + 1 until c == "" or p >= m end
+        fPD("Desc", 3) fPD("Asc", 3) aFi()
     end)
 end
 
-refreshBtn.MouseButton1Click:Connect(function() 
-    TweenService:Create(refreshBtn, TweenInfo.new(0.5, Enum.EasingStyle.Cubic), {Rotation = refreshBtn.Rotation + 360}):Play()
-    task.delay(0.5, function() refreshBtn.Rotation = 0 end)
-    turboLoadServers() 
-end)
+rfBtn.MouseButton1Click:Connect(function() TweenService:Create(rfBtn, TweenInfo.new(0.5, Enum.EasingStyle.Cubic), {Rotation = rfBtn.Rotation + 360}):Play() task.delay(0.5, function() rfBtn.Rotation = 0 end) tLS() end)
+nxB.MouseButton1Click:Connect(function() rBP(cPge + 1) end)
+pvB.MouseButton1Click:Connect(function() rBP(cPge - 1) end)
 
-nextBtn.MouseButton1Click:Connect(function() renderBrowserPage(currentBrowserPage + 1) end)
-prevBtn.MouseButton1Click:Connect(function() renderBrowserPage(currentBrowserPage - 1) end)
-
-bPlaceBox.FocusLost:Connect(function(enter) 
-    if enter or bPlaceBox.Text ~= "" then turboLoadServers() end 
-end)
-
-local browserSearching = false
-bFindBtn.MouseButton1Click:Connect(function()
-    if browserSearching then
-        browserSearching = false
-        bFindBtn.Text = "FIND"
-        pLabel.Text = "SEARCH CANCELED"
-        return
-    end
-    
-    local targetStr = bFindBox.Text
-    if targetStr == "" then 
-        turboLoadServers()
-        return 
-    end
-
-    bFindBtn.Text = "STOP"
-    pLabel.Text = "LOCATING TARGET..."
-    browserSearching = true
-
+local bSr = false
+ffBtn.MouseButton1Click:Connect(function()
+    if bSr then bSr = false ffBtn.Text = "FIND" pLb.Text = "ABORT" return end
+    local ts = bfBx.Text if ts == "" then tLS() return end
+    ffBtn.Text = "STOP" pLb.Text = "SCANNING..." bSr = true
     task.spawn(function()
-        local s, userId = pcall(function() return tonumber(targetStr) or Players:GetUserIdFromNameAsync(targetStr) end)
-        if not s or not userId then 
-            browserSearching = false
-            bFindBtn.Text = "FIND"
-            pLabel.Text = "INVALID TARGET"
-            return 
-        end
-
-        local thumbnail = getTargetThumbDirect(userId)
-        if thumbnail == "" then 
-            browserSearching = false
-            bFindBtn.Text = "FIND"
-            pLabel.Text = "FETCH ERROR"
-            return 
-        end
-
-        local pId = tonumber(bPlaceBox.Text) or game.PlaceId
-        local cursor = ""
-        local foundServer = nil
-        
-        while browserSearching do
-            local successFetch, result = getServersDirect(pId, cursor)
-            if successFetch and result and result.data then
-                local servers = result.data
-                cursor = result.nextPageCursor
-                for _, server in ipairs(servers) do
-                    if not browserSearching then break end
-                    if server.playerTokens and #server.playerTokens > 0 then
-                        local sThumb, thumbs = fetchThumbsDirectChunked(server.playerTokens)
-                        if sThumb and thumbs then
-                            for _, pTh in ipairs(thumbs) do
-                                if pTh.imageUrl and pTh.imageUrl == thumbnail then
-                                    foundServer = server
-                                    browserSearching = false
-                                    break
-                                end
-                            end
-                        end
-                    end
-                    if foundServer then break end
-                    task.wait()
+        local s, uid = pcall(function() return tonumber(ts) or Players:GetUserIdFromNameAsync(ts) end)
+        if not s or not uid then bSr = false ffBtn.Text = "FIND" pLb.Text = "ERR: UID" return end
+        local th = gTTD(uid) if th == "" then bSr = false ffBtn.Text = "FIND" pLb.Text = "ERR: API" return end
+        local pId = gID local cr = "" local fS = nil
+        while bSr do
+            local sF, res = gSD(pId, cr)
+            if sF and res and res.data then
+                local svs = res.data cr = res.nextPageCursor
+                for _, sv in ipairs(svs) do
+                    if not bSr then break end
+                    if sv.playerTokens and #sv.playerTokens > 0 then local sth, ths = fTDC(sv.playerTokens) if sth and ths then for _, pt in ipairs(ths) do if pt.imageUrl and pt.imageUrl == th then fS = sv bSr = false break end end end end
+                    if fS then break end task.wait()
                 end
-                if foundServer or not cursor then break end
-            else 
-                task.wait(2) 
-            end
+                if fS or not cr then break end
+            else task.wait(2) end
         end
-
-        browserSearching = false
-        bFindBtn.Text = "FIND"
-
-        if foundServer then
-            allServersData = {foundServer}
-            currentFilter = "All"
-            for n, b in pairs(filterBtns) do 
-                b.BackgroundColor3 = (n == "All") and Theme.Primary or Theme.Background
-                b.TextColor3 = (n == "All") and Theme.Background or Theme.TextMuted 
-            end
-            applyFilters()
-            pLabel.Text = "TARGET FOUND"
-        else
-            pLabel.Text = "TARGET NOT FOUND"
-            allServersData = {}
-            applyFilters()
-        end
+        bSr = false ffBtn.Text = "FIND"
+        if fS then aSv = {fS} cF = "All" for n, b in pairs(fBts) do TweenService:Create(b, TweenInfo.new(0.2), {BackgroundColor3 = (n == "All") and Theme.Primary or Theme.Item, TextColor3 = (n == "All") and Theme.BG or Theme.SubText}):Play() end aFi() pLb.Text = "FOUND" else pLb.Text = "GHOSTED" aSv = {} aFi() end
     end)
 end)
 
-turboLoadServers()
+tLS()
