@@ -171,26 +171,26 @@ local function CreateInputBox(parent, placeholder, yPos)
     return box
 end
 
--- [[ SNIPE PAGE CONTENT (UPDATED WITH AMOUNT & CLEAR) ]]
+-- [[ SNIPE PAGE CONTENT ]]
 local sTitle = Instance.new("TextLabel", snipePage); sTitle.Size = UDim2.new(0.9, 0, 0, 20); sTitle.Position = UDim2.new(0.05, 0, 0, 5); sTitle.Text = "// ACQUIRE TARGET"; sTitle.TextColor3 = Theme.Primary; sTitle.Font = Enum.Font.GothamBold; sTitle.TextSize = 12; sTitle.TextXAlignment = Enum.TextXAlignment.Left; sTitle.BackgroundTransparency = 1
 local userBox = CreateInputBox(snipePage, "> Target Username or UserId", 25)
 local placeBox = CreateInputBox(snipePage, "> Place Id (Leave blank for current)", 65)
 local scanAmtBox = CreateInputBox(snipePage, "> Max Scan per Server (Blank = Full Server)", 105)
 
 local executeBtn = Instance.new("TextButton", snipePage)
-executeBtn.Size = UDim2.new(0.65, 0, 0, 40); executeBtn.Position = UDim2.new(0.05, 0, 0, 150)
+executeBtn.Size = UDim2.new(0.65, 0, 0, 35); executeBtn.Position = UDim2.new(0.05, 0, 0, 150)
 executeBtn.BackgroundColor3 = Theme.Background; executeBtn.TextColor3 = Theme.Primary
 executeBtn.Font = Enum.Font.Code; executeBtn.TextSize = 14; executeBtn.Text = "EXECUTE"
 createCorner(executeBtn, 6); createStroke(executeBtn, Theme.Primary); applyHover(executeBtn, Color3.fromRGB(0, 40, 20))
 
 local clearBtn = Instance.new("TextButton", snipePage)
-clearBtn.Size = UDim2.new(0.22, 0, 0, 40); clearBtn.Position = UDim2.new(0.73, 0, 0, 150)
+clearBtn.Size = UDim2.new(0.22, 0, 0, 35); clearBtn.Position = UDim2.new(0.73, 0, 0, 150)
 clearBtn.BackgroundColor3 = Theme.Background; clearBtn.TextColor3 = Theme.Error
 clearBtn.Font = Enum.Font.Code; clearBtn.TextSize = 14; clearBtn.Text = "CLEAR"
 createCorner(clearBtn, 6); createStroke(clearBtn, Theme.Error); applyHover(clearBtn, Color3.fromRGB(50, 10, 10))
 
 local logScroll = Instance.new("ScrollingFrame", snipePage)
-logScroll.Size = UDim2.new(0.9, 0, 0, 135); logScroll.Position = UDim2.new(0.05, 0, 0, 200)
+logScroll.Size = UDim2.new(0.9, 0, 0, 140); logScroll.Position = UDim2.new(0.05, 0, 0, 195)
 logScroll.BackgroundColor3 = Theme.Background; logScroll.BorderSizePixel = 0; logScroll.ScrollBarThickness = 2; logScroll.ScrollBarImageColor3 = Theme.Primary
 createCorner(logScroll, 6); createStroke(logScroll, Theme.Border)
 local listLog = Instance.new("UIListLayout", logScroll); listLog.VerticalAlignment = Enum.VerticalAlignment.Bottom; listLog.Padding = UDim.new(0, 2)
@@ -203,18 +203,21 @@ local function AddLogEntry(text, color)
 end
 
 clearBtn.MouseButton1Click:Connect(function()
-    for _, child in ipairs(logScroll:GetChildren()) do
-        if child:IsA("TextLabel") then child:Destroy() end
-    end
+    for _, child in ipairs(logScroll:GetChildren()) do if child:IsA("TextLabel") then child:Destroy() end end
 end)
 
--- [[ BROWSER PAGE CONTENT ]]
-local bTitle = Instance.new("TextLabel", browserPage); bTitle.Size = UDim2.new(0.9, 0, 0, 25); bTitle.Position = UDim2.new(0.05, 0, 0, 5); bTitle.Text = "// NETWORK NODES"; bTitle.TextColor3 = Theme.Primary; bTitle.Font = Enum.Font.GothamBold; bTitle.TextSize = 12; bTitle.TextXAlignment = Enum.TextXAlignment.Left; bTitle.BackgroundTransparency = 1
-local bPlaceBox = CreateInputBox(browserPage, "> Place Id (Optional)", 30); bPlaceBox.Parent.Size = UDim2.new(0.75, 0, 0, 35)
-local refreshBtn = Instance.new("ImageButton", browserPage); refreshBtn.Size = UDim2.new(0, 35, 0, 35); refreshBtn.Position = UDim2.new(0.8, 0, 0, 30); refreshBtn.BackgroundColor3 = Theme.Background; refreshBtn.Image = "rbxassetid://6031094670"; refreshBtn.ImageColor3 = Theme.Primary; createCorner(refreshBtn, 6); createStroke(refreshBtn, Theme.Primary); applyHover(refreshBtn, Theme.Surface)
+-- [[ BROWSER PAGE CONTENT & FINDER TARGET ]]
+local bTitle = Instance.new("TextLabel", browserPage); bTitle.Size = UDim2.new(0.9, 0, 0, 20); bTitle.Position = UDim2.new(0.05, 0, 0, 5); bTitle.Text = "// NETWORK NODES"; bTitle.TextColor3 = Theme.Primary; bTitle.Font = Enum.Font.GothamBold; bTitle.TextSize = 12; bTitle.TextXAlignment = Enum.TextXAlignment.Left; bTitle.BackgroundTransparency = 1
+local bPlaceBox = CreateInputBox(browserPage, "> Place Id (Optional)", 25); bPlaceBox.Parent.Size = UDim2.new(0.75, 0, 0, 30)
+local refreshBtn = Instance.new("ImageButton", browserPage); refreshBtn.Size = UDim2.new(0, 40, 0, 30); refreshBtn.Position = UDim2.new(0.8, 0, 0, 25); refreshBtn.BackgroundColor3 = Theme.Background; refreshBtn.Image = "rbxassetid://6031094670"; refreshBtn.ImageColor3 = Theme.Primary; createCorner(refreshBtn, 6); createStroke(refreshBtn, Theme.Primary); applyHover(refreshBtn, Theme.Surface)
+
+-- 🔥 NEW: FIND PLAYER IN BROWSER 🔥
+local bFindBox = CreateInputBox(browserPage, "> Find Player (Username/ID)", 60); bFindBox.Parent.Size = UDim2.new(0.75, 0, 0, 30)
+local bFindBtn = Instance.new("TextButton", browserPage); bFindBtn.Size = UDim2.new(0, 40, 0, 30); bFindBtn.Position = UDim2.new(0.8, 0, 0, 60); bFindBtn.BackgroundColor3 = Theme.Background; bFindBtn.TextColor3 = Theme.Primary; bFindBtn.Font = Enum.Font.GothamBold; bFindBtn.TextSize = 11; bFindBtn.Text = "FIND"
+createCorner(bFindBtn, 6); createStroke(bFindBtn, Theme.Primary); applyHover(bFindBtn, Color3.fromRGB(0, 40, 20))
 
 -- 🔥 FILTER TABS 🔥
-local filterContainer = Instance.new("Frame", browserPage); filterContainer.Size = UDim2.new(0.9, 0, 0, 25); filterContainer.Position = UDim2.new(0.05, 0, 0, 75); filterContainer.BackgroundTransparency = 1
+local filterContainer = Instance.new("Frame", browserPage); filterContainer.Size = UDim2.new(0.9, 0, 0, 20); filterContainer.Position = UDim2.new(0.05, 0, 0, 95); filterContainer.BackgroundTransparency = 1
 local FILTERS = {"All", "Low Ping", "Small", "Large"}
 local filterBtns = {}
 local currentFilter = "All"
@@ -228,7 +231,7 @@ for i, f in ipairs(FILTERS) do
 end
 
 local sList = Instance.new("ScrollingFrame", browserPage)
-sList.Size = UDim2.new(0.9, 0, 0, 195); sList.Position = UDim2.new(0.05, 0, 0, 108)
+sList.Size = UDim2.new(0.9, 0, 0, 180); sList.Position = UDim2.new(0.05, 0, 0, 120)
 sList.BackgroundColor3 = Theme.Background; sList.BackgroundTransparency = 1; sList.BorderSizePixel = 0; sList.ScrollBarThickness = 2; sList.ScrollBarImageColor3 = Theme.Primary
 local listLayout = Instance.new("UIListLayout", sList); listLayout.Padding = UDim.new(0, 6)
 
@@ -238,8 +241,99 @@ local nextBtn = Instance.new("TextButton", pControls); nextBtn.Size = UDim2.new(
 local pLabel = Instance.new("TextLabel", pControls); pLabel.Size = UDim2.new(0.5, 0, 1, 0); pLabel.Position = UDim2.new(0.25, 0, 0, 0); pLabel.BackgroundTransparency = 1; pLabel.TextColor3 = Theme.Primary; pLabel.Font = Enum.Font.Code; pLabel.TextSize = 12; pLabel.Text = "PAGE 1 / 1"
 
 -- ==========================================
--- 🚀 TURBO BROWSER ENGINE (FAST FETCH + CLIENT PAGINATION)
+-- 🚀 CORE API ENGINE
 -- ==========================================
+local function getTargetThumbDirect(userId)
+    local s, r = pcall(function() return game:HttpGet("https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=" .. userId .. "&format=Png&size=150x150&isCircular=false") end)
+    if s and r and r:sub(1,1) == "{" then local data = safeJSONDecode(r); if data and data.data and data.data[1] then return data.data[1].imageUrl end end
+    return ""
+end
+local function getServersDirect(id, cursor)
+    local fullurl = "https://games.roblox.com/v1/games/".. id .."/servers/Public?limit=100" .. (cursor and "&cursor="..cursor or "")
+    local s, r = pcall(function() return game:HttpGet(fullurl) end)
+    if s and r and r:sub(1,1) == "{" then local dec = safeJSONDecode(r); if dec then return true, dec end end
+    return false, nil
+end
+local function fetchThumbsDirectChunked(tokens)
+    local allThumbs = {}
+    for i = 1, #tokens, 100 do
+        local chunk = {unpack(tokens, i, math.min(i + 99, #tokens))}
+        local payload = { Url = "https://thumbnails.roblox.com/v1/batch", Headers = { ["Content-Type"] = "application/json" }, Method = "POST", Body = {} }
+        for _, token in ipairs(chunk) do table.insert(payload.Body, {requestId = "0:"..token..":AvatarHeadshot:150x150:png:regular", type = "AvatarHeadShot", targetId = 0, token = token, format = "png", size = "150x150"}) end
+        local sEnc, encBody = pcall(function() return HttpService:JSONEncode(payload.Body) end)
+        if sEnc then
+            payload.Body = encBody
+            local success, result = pcall(function() return httprequest(payload) end)
+            if success and result and result.Success then 
+                local dec = safeJSONDecode(result.Body)
+                if dec and dec.data then for _, v in ipairs(dec.data) do table.insert(allThumbs, v) end end
+            end
+        end
+    end
+    if #allThumbs > 0 then return true, allThumbs end
+    return false, nil
+end
+
+userBox.FocusLost:Connect(function()
+    local t = userBox.Text; if t ~= "" then task.spawn(function() local s, id = pcall(function() return tonumber(t) or Players:GetUserIdFromNameAsync(t) end) if s and id then avatarImage.Image = "rbxthumb://type=AvatarHeadShot&id=" .. id .. "&w=150&h=150" end end) else avatarImage.Image = "rbxasset://textures/ui/GuiImagePlaceholder.png" end
+end)
+
+-- [[ SNIPER LOGIC ]]
+local snipeSearching = false
+executeBtn.MouseButton1Click:Connect(function()
+    if confirm then confirm = false; snipeSearching = false; executeBtn.Text = "EXECUTE"; AddLogEntry("Sequence Aborted.", Theme.Error); return end
+    if snipeSearching then confirm = true; local old = executeBtn.Text; executeBtn.Text = "CONFIRM?"; AddLogEntry("Awaiting abort confirm...", Theme.Warning); task.delay(4, function() if executeBtn.Text == "CONFIRM?" then confirm = false; executeBtn.Text = old end end); return end
+    
+    snipeSearching = true; executeBtn.Text = "ABORT"; AddLogEntry("Initializing Protocol...", Theme.Primary)
+    local username = userBox.Text; local s, userId = pcall(function() return tonumber(username) or Players:GetUserIdFromNameAsync(username) end)
+    if not s or not userId then snipeSearching = false; executeBtn.Text = "EXECUTE"; AddLogEntry("Error: Target ID unresolvable.", Theme.Error); return end
+    avatarImage.Image = "rbxthumb://type=AvatarHeadShot&id=" .. userId .. "&w=150&h=150"
+    
+    local thumbnail = getTargetThumbDirect(userId); if thumbnail == "" then snipeSearching = false; executeBtn.Text = "EXECUTE"; AddLogEntry("Direct Fetch Blocked.", Theme.Error); return end
+    AddLogEntry("Target Locked: " .. userId, Theme.Primary)
+    local placeId = tonumber(placeBox.Text); if placeBox.Text:gsub("%s", "") == "" then placeId = game.PlaceId elseif not placeId then snipeSearching = false; executeBtn.Text = "EXECUTE"; AddLogEntry("Invalid Place ID.", Theme.Error); return end
+    
+    local maxScanAmt = tonumber(scanAmtBox.Text)
+    if not maxScanAmt or maxScanAmt <= 0 then maxScanAmt = 9999 end
+    
+    local cursor, searched, playersCount = nil, 0, 0
+    task.spawn(function()
+        while snipeSearching do
+            local successFetch, result = getServersDirect(placeId, cursor)
+            if successFetch and result and result.data then
+                local servers = result.data; cursor = result.nextPageCursor
+                for index, server in ipairs(servers) do
+                    if not snipeSearching then break end
+                    task.spawn(function()
+                        if server.playerTokens and #server.playerTokens > 0 then
+                            local tokensToScan = {}
+                            for i = 1, math.min(#server.playerTokens, maxScanAmt) do table.insert(tokensToScan, server.playerTokens[i]) end
+                            if #tokensToScan > 0 then
+                                local sThumb, thumbs = fetchThumbsDirectChunked(tokensToScan)
+                                if sThumb and thumbs then 
+                                    playersCount = playersCount + #thumbs
+                                    for _, pTh in ipairs(thumbs) do 
+                                        if pTh.imageUrl and pTh.imageUrl == thumbnail then 
+                                            snipeSearching = false; AddLogEntry("MATCH FOUND! TELEPORTING...", Theme.Primary)
+                                            TeleportService:TeleportToPlaceInstance(placeId, server.id, Players.LocalPlayer); return 
+                                        end 
+                                    end 
+                                end
+                            end
+                        end
+                    end)
+                    searched = searched + 1; AddLogEntry(string.format("Nodes: %d | Entities: %d", searched, playersCount), Theme.TextMuted)
+                    if index % 30 ~= 0 then task.wait() end
+                end
+                if not cursor then break end
+            else AddLogEntry("Rate Limit. Delaying 2s...", Theme.TextMuted); task.wait(2) end
+            task.wait()
+        end
+        if snipeSearching then snipeSearching = false; executeBtn.Text = "EXECUTE"; AddLogEntry("Search exhausted. Target missing.", Theme.Error) end
+    end)
+end)
+
+-- [[ BROWSER LOGIC & FINDER ]]
 local allServersData = {}
 local filteredServersData = {}
 local currentBrowserPage = 1
@@ -264,17 +358,17 @@ local function renderBrowserPage(page)
     
     for i = startIndex, endIndex do
         local srv = filteredServersData[i]
-        local item = Instance.new("Frame", sList); item.Size = UDim2.new(1, -10, 0, 50); item.BackgroundColor3 = Theme.Background; createCorner(item, 6); createStroke(item, Theme.Border)
+        local item = Instance.new("Frame", sList); item.Size = UDim2.new(1, -10, 0, 45); item.BackgroundColor3 = Theme.Background; createCorner(item, 6); createStroke(item, Theme.Border)
         
         local info = Instance.new("TextLabel", item); info.Size = UDim2.new(0.6, 0, 1, 0); info.Position = UDim2.new(0, 15, 0, 0); info.BackgroundTransparency = 1; info.TextXAlignment = Enum.TextXAlignment.Left; info.TextColor3 = Theme.Text; info.Font = Enum.Font.Code; info.TextSize = 11
         local pingVal = srv.ping or 999; info.Text = string.format("ID: %s...\nUsers: %d / %d | Ping: %sms", string.sub(srv.id, 1, 8), srv.playing or 0, srv.maxPlayers or 0, tostring(pingVal))
         
         local pingIndicator = Instance.new("Frame", item); pingIndicator.Size = UDim2.new(0, 4, 0, 20); pingIndicator.Position = UDim2.new(0, 4, 0.5, -10); pingIndicator.BackgroundColor3 = getPingColor(pingVal); pingIndicator.BorderSizePixel = 0; createCorner(pingIndicator, 2)
 
-        local copyBtn = Instance.new("TextButton", item); copyBtn.Size = UDim2.new(0, 45, 0, 30); copyBtn.Position = UDim2.new(1, -105, 0.5, -15); copyBtn.BackgroundColor3 = Theme.Background; copyBtn.TextColor3 = Theme.Secondary; copyBtn.Font = Enum.Font.Code; copyBtn.TextSize = 10; copyBtn.Text = "COPY"; createCorner(copyBtn, 4); createStroke(copyBtn, Theme.Secondary); applyHover(copyBtn, Theme.Surface)
+        local copyBtn = Instance.new("TextButton", item); copyBtn.Size = UDim2.new(0, 40, 0, 25); copyBtn.Position = UDim2.new(1, -95, 0.5, -12.5); copyBtn.BackgroundColor3 = Theme.Background; copyBtn.TextColor3 = Theme.Secondary; copyBtn.Font = Enum.Font.Code; copyBtn.TextSize = 9; copyBtn.Text = "COPY"; createCorner(copyBtn, 4); createStroke(copyBtn, Theme.Secondary); applyHover(copyBtn, Theme.Surface)
         copyBtn.MouseButton1Click:Connect(function() set_clipboard(tostring(srv.id)); copyBtn.Text = "COPIED!"; task.wait(1); copyBtn.Text = "COPY" end)
 
-        local joinSrvBtn = Instance.new("TextButton", item); joinSrvBtn.Size = UDim2.new(0, 45, 0, 30); joinSrvBtn.Position = UDim2.new(1, -55, 0.5, -15); joinSrvBtn.BackgroundColor3 = Theme.Primary; joinSrvBtn.TextColor3 = Theme.Background; joinSrvBtn.Font = Enum.Font.GothamBold; joinSrvBtn.TextSize = 11; joinSrvBtn.Text = "JOIN"; createCorner(joinSrvBtn, 4); applyHover(joinSrvBtn, Color3.fromRGB(0, 200, 80))
+        local joinSrvBtn = Instance.new("TextButton", item); joinSrvBtn.Size = UDim2.new(0, 40, 0, 25); joinSrvBtn.Position = UDim2.new(1, -50, 0.5, -12.5); joinSrvBtn.BackgroundColor3 = Theme.Primary; joinSrvBtn.TextColor3 = Theme.Background; joinSrvBtn.Font = Enum.Font.GothamBold; joinSrvBtn.TextSize = 10; joinSrvBtn.Text = "JOIN"; createCorner(joinSrvBtn, 4); applyHover(joinSrvBtn, Color3.fromRGB(0, 200, 80))
         joinSrvBtn.MouseButton1Click:Connect(function() TeleportService:TeleportToPlaceInstance(pId, srv.id, Players.LocalPlayer) end)
     end
     sList.CanvasSize = UDim2.new(0, 0, 0, listLayout.AbsoluteContentSize.Y + 5)
@@ -336,100 +430,76 @@ nextBtn.MouseButton1Click:Connect(function() renderBrowserPage(currentBrowserPag
 prevBtn.MouseButton1Click:Connect(function() renderBrowserPage(currentBrowserPage - 1) end)
 bPlaceBox.FocusLost:Connect(function(enter) if enter or bPlaceBox.Text ~= "" then turboLoadServers() end end)
 
--- ==========================================
--- 🚀 CHUNKED SNIPE TARGET EXECUTION (FULL SERVER SUPPORT)
--- ==========================================
-local searching, confirm, threads = false, false, 30
-
-local function getTargetThumbDirect(userId)
-    local s, r = pcall(function() return game:HttpGet("https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=" .. userId .. "&format=Png&size=150x150&isCircular=false") end)
-    if s and r and r:sub(1,1) == "{" then local data = safeJSONDecode(r); if data and data.data and data.data[1] then return data.data[1].imageUrl end end
-    return ""
-end
-local function getServersDirect(id, cursor)
-    local fullurl = "https://games.roblox.com/v1/games/".. id .."/servers/Public?limit=100" .. (cursor and "&cursor="..cursor or "")
-    local s, r = pcall(function() return game:HttpGet(fullurl) end)
-    if s and r and r:sub(1,1) == "{" then local dec = safeJSONDecode(r); if dec then return true, dec end end
-    return false, nil
-end
-
--- อัปเกรด: ระบบ Chunking สแกนคนได้ทะลุ 100 คนต่อเซิร์ฟเวอร์
-local function fetchThumbsDirectChunked(tokens)
-    local allThumbs = {}
-    for i = 1, #tokens, 100 do
-        local chunk = {unpack(tokens, i, math.min(i + 99, #tokens))}
-        local payload = { Url = "https://thumbnails.roblox.com/v1/batch", Headers = { ["Content-Type"] = "application/json" }, Method = "POST", Body = {} }
-        for _, token in ipairs(chunk) do table.insert(payload.Body, {requestId = "0:"..token..":AvatarHeadshot:150x150:png:regular", type = "AvatarHeadShot", targetId = 0, token = token, format = "png", size = "150x150"}) end
-        local sEnc, encBody = pcall(function() return HttpService:JSONEncode(payload.Body) end)
-        if sEnc then
-            payload.Body = encBody
-            local success, result = pcall(function() return httprequest(payload) end)
-            if success and result and result.Success then 
-                local dec = safeJSONDecode(result.Body)
-                if dec and dec.data then for _, v in ipairs(dec.data) do table.insert(allThumbs, v) end end
-            end
-        end
+-- 🔥 NEW: FIND PLAYER IN BROWSER 🔥
+local browserSearching = false
+bFindBtn.MouseButton1Click:Connect(function()
+    if browserSearching then
+        browserSearching = false
+        bFindBtn.Text = "FIND"
+        pLabel.Text = "SEARCH CANCELED"
+        return
     end
-    if #allThumbs > 0 then return true, allThumbs end
-    return false, nil
-end
+    
+    local targetStr = bFindBox.Text
+    if targetStr == "" then 
+        turboLoadServers() -- ถ้าปล่อยว่างให้สแกนโหลดเซิร์ฟเวอร์แบบเดิม
+        return 
+    end
 
-userBox.FocusLost:Connect(function()
-    local t = userBox.Text; if t ~= "" then task.spawn(function() local s, id = pcall(function() return tonumber(t) or Players:GetUserIdFromNameAsync(t) end) if s and id then avatarImage.Image = "rbxthumb://type=AvatarHeadShot&id=" .. id .. "&w=150&h=150" end end) else avatarImage.Image = "rbxasset://textures/ui/GuiImagePlaceholder.png" end
-end)
+    bFindBtn.Text = "STOP"
+    pLabel.Text = "LOCATING TARGET..."
+    browserSearching = true
 
-executeBtn.MouseButton1Click:Connect(function()
-    if confirm then confirm = false; searching = false; executeBtn.Text = "EXECUTE"; AddLogEntry("Sequence Aborted.", Theme.Error); return end
-    if searching then confirm = true; local old = executeBtn.Text; executeBtn.Text = "CONFIRM?"; AddLogEntry("Awaiting abort confirm...", Theme.Warning); task.delay(4, function() if executeBtn.Text == "CONFIRM?" then confirm = false; executeBtn.Text = old end end); return end
-    
-    searching = true; executeBtn.Text = "ABORT"; AddLogEntry("Initializing Ghost Protocol...", Theme.Primary)
-    local username = userBox.Text; local s, userId = pcall(function() return tonumber(username) or Players:GetUserIdFromNameAsync(username) end)
-    if not s or not userId then searching = false; executeBtn.Text = "EXECUTE"; AddLogEntry("Error: Target ID unresolvable.", Theme.Error); return end
-    avatarImage.Image = "rbxthumb://type=AvatarHeadShot&id=" .. userId .. "&w=150&h=150"; AddLogEntry("Extracting image hashes...", Theme.Text)
-    
-    local thumbnail = getTargetThumbDirect(userId); if thumbnail == "" then searching = false; executeBtn.Text = "EXECUTE"; AddLogEntry("Direct Fetch Blocked.", Theme.Error); return end
-    AddLogEntry("Target Locked: " .. userId, Theme.Primary); AddLogEntry("Scanning active nodes...", Theme.Text)
-    
-    local placeId = tonumber(placeBox.Text); if placeBox.Text:gsub("%s", "") == "" then placeId = game.PlaceId elseif not placeId then searching = false; executeBtn.Text = "EXECUTE"; AddLogEntry("Invalid Place ID.", Theme.Error); return end
-    
-    local maxScanAmt = tonumber(scanAmtBox.Text)
-    if not maxScanAmt or maxScanAmt <= 0 then maxScanAmt = 9999 end -- ถ่าปล่อยว่าง = สแกนทั้งเซิร์ฟเวอร์
-    
-    local cursor, searched, playersCount = nil, 0, 0
     task.spawn(function()
-        while searching do
-            local successFetch, result = getServersDirect(placeId, cursor)
+        local s, userId = pcall(function() return tonumber(targetStr) or Players:GetUserIdFromNameAsync(targetStr) end)
+        if not s or not userId then browserSearching = false; bFindBtn.Text = "FIND"; pLabel.Text = "INVALID TARGET"; return end
+
+        local thumbnail = getTargetThumbDirect(userId)
+        if thumbnail == "" then browserSearching = false; bFindBtn.Text = "FIND"; pLabel.Text = "FETCH ERROR"; return end
+
+        local pId = tonumber(bPlaceBox.Text) or game.PlaceId
+        local cursor = ""
+        local foundServer = nil
+        
+        while browserSearching do
+            local successFetch, result = getServersDirect(pId, cursor)
             if successFetch and result and result.data then
                 local servers = result.data; cursor = result.nextPageCursor
-                for index, server in ipairs(servers) do
-                    if not searching then break end
-                    task.spawn(function()
-                        if server.playerTokens and #server.playerTokens > 0 then
-                            local tokensToScan = {}
-                            for i = 1, math.min(#server.playerTokens, maxScanAmt) do table.insert(tokensToScan, server.playerTokens[i]) end
-                            
-                            if #tokensToScan > 0 then
-                                local sThumb, thumbs = fetchThumbsDirectChunked(tokensToScan)
-                                if sThumb and thumbs then 
-                                    playersCount = playersCount + #thumbs
-                                    for _, pTh in ipairs(thumbs) do 
-                                        if pTh.imageUrl and pTh.imageUrl == thumbnail then 
-                                            searching = false; AddLogEntry("MATCH FOUND! TELEPORTING...", Theme.Primary)
-                                            TeleportService:TeleportToPlaceInstance(placeId, server.id, Players.LocalPlayer); return 
-                                        end 
-                                    end 
+                for _, server in ipairs(servers) do
+                    if not browserSearching then break end
+                    if server.playerTokens and #server.playerTokens > 0 then
+                        local sThumb, thumbs = fetchThumbsDirectChunked(server.playerTokens)
+                        if sThumb and thumbs then
+                            for _, pTh in ipairs(thumbs) do
+                                if pTh.imageUrl and pTh.imageUrl == thumbnail then
+                                    foundServer = server
+                                    browserSearching = false
+                                    break
                                 end
                             end
                         end
-                    end)
-                    searched = searched + 1; AddLogEntry(string.format("Nodes: %d | Entities: %d", searched, playersCount), Theme.TextMuted)
-                    if index % 30 ~= 0 then task.wait() end
+                    end
+                    if foundServer then break end
+                    task.wait()
                 end
-                if not cursor then break end
-            else AddLogEntry("Rate Limit. Delaying 2s...", Theme.TextMuted); task.wait(2) end
-            task.wait()
+                if foundServer or not cursor then break end
+            else task.wait(2) end
         end
-        if searching then searching = false; executeBtn.Text = "EXECUTE"; AddLogEntry("Search exhausted. Target missing.", Theme.Error) end
+
+        browserSearching = false
+        bFindBtn.Text = "FIND"
+
+        if foundServer then
+            allServersData = {foundServer} -- โชว์แค่เซิร์ฟเดียวที่หาเจอ
+            currentFilter = "All"
+            for n, b in pairs(filterBtns) do b.BackgroundColor3 = (n == "All") and Theme.Primary or Theme.Background; b.TextColor3 = (n == "All") and Theme.Background or Theme.TextMuted end
+            applyFilters()
+            pLabel.Text = "TARGET FOUND"
+        else
+            pLabel.Text = "TARGET NOT FOUND"
+            allServersData = {}
+            applyFilters()
+        end
     end)
 end)
 
