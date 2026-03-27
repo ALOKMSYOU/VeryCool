@@ -1,0 +1,333 @@
+local Players = game:GetService("Players")
+local HttpService = game:GetService("HttpService")
+local TeleportService = game:GetService("TeleportService")
+local CoreGui = game:GetService("CoreGui")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local httprequest = (syn and syn.request) or (fluxus and fluxus.request) or (http and http.request) or request
+
+-- ฟังก์ชันสำหรับก๊อปปี้ข้อความ
+local set_clipboard = setclipboard or toclipboard or set_clipboard or (Clipboard and Clipboard.set) or function(text) print("Clipboard unsupported: " .. text) end
+
+if _G.JoinAnyoneUI then pcall(function() CoreGui.JoinAnyoneUI:Destroy() end) end
+_G.JoinAnyoneUI = true
+
+local RENDER_PROXY = "https://myproxy-kra1.onrender.com"
+
+-- [[ 🎨 HACKER NEON PALETTE ]]
+local Theme = {
+    Background = Color3.fromRGB(10, 12, 16),
+    Surface = Color3.fromRGB(20, 24, 32),
+    Primary = Color3.fromRGB(0, 255, 100), -- Neon Hacker Green
+    Secondary = Color3.fromRGB(0, 180, 255),
+    Text = Color3.fromRGB(240, 245, 255),
+    TextMuted = Color3.fromRGB(100, 120, 140),
+    Border = Color3.fromRGB(40, 50, 65),
+    Error = Color3.fromRGB(255, 50, 50)
+}
+
+-- [[ UI SYSTEM SETUP ]]
+local screenGui = Instance.new("ScreenGui", CoreGui)
+screenGui.Name = "JoinAnyoneUI"
+screenGui.ResetOnSpawn = false
+
+-- [[ HELPER FUNCTIONS ]]
+local function createCorner(parent, radius)
+    local corner = Instance.new("UICorner", parent); corner.CornerRadius = UDim.new(0, radius or 6); return corner
+end
+
+local function createStroke(parent, color, thickness)
+    local stroke = Instance.new("UIStroke", parent)
+    stroke.Color = color or Theme.Border; stroke.Thickness = thickness or 1; stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    return stroke
+end
+
+local function applyHover(frame, targetColor)
+    local orig = frame.BackgroundColor3
+    frame.MouseEnter:Connect(function() TweenService:Create(frame, TweenInfo.new(0.2), {BackgroundColor3 = targetColor}):Play() end)
+    frame.MouseLeave:Connect(function() TweenService:Create(frame, TweenInfo.new(0.2), {BackgroundColor3 = orig}):Play() end)
+end
+
+local function applyGlitchEffect(object)
+    task.spawn(function()
+        local origPos = object.Position
+        while object.Parent do
+            task.wait(math.random(2, 6))
+            for i=1, 2 do
+                object.Position = origPos + UDim2.new(0, math.random(-2, 2), 0, math.random(-1, 1))
+                task.wait(0.05); object.Position = origPos; task.wait(0.05)
+            end
+        end
+    end)
+end
+
+-- [[ 🔥 FLOATING MOBILE TOGGLE ]]
+local toggleBtn = Instance.new("ImageButton", screenGui)
+toggleBtn.Size = UDim2.new(0, 50, 0, 50); toggleBtn.Position = UDim2.new(0.05, 0, 0.15, 0)
+toggleBtn.BackgroundColor3 = Theme.Background; toggleBtn.BackgroundTransparency = 0.2
+toggleBtn.Image = "rbxassetid://6031280224"; toggleBtn.ImageColor3 = Theme.Primary
+createCorner(toggleBtn, 25); createStroke(toggleBtn, Theme.Primary, 2)
+
+-- [[ 🚀 MAIN WRAPPER (CanvasGroup for smooth fade) ]]
+local main = Instance.new("CanvasGroup", screenGui)
+main.AnchorPoint = Vector2.new(0.5, 0.5)
+main.Size = UDim2.new(0, 580, 0, 380); main.Position = UDim2.new(0.5, 0, 0.5, 0)
+main.BackgroundColor3 = Theme.Background; main.BorderSizePixel = 0
+createCorner(main, 8); createStroke(main, Theme.Primary, 2)
+
+-- Mobile Toggle Logic
+local isVisible = true
+local dragToggleBtn, dragStartBtn, startPosBtn, hasDraggedBtn = false, nil, nil, false
+toggleBtn.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragToggleBtn = true; hasDraggedBtn = false; dragStartBtn = input.Position; startPosBtn = toggleBtn.Position end end)
+UserInputService.InputChanged:Connect(function(input) if dragToggleBtn and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then local delta = input.Position - dragStartBtn; if delta.Magnitude > 5 then hasDraggedBtn = true; toggleBtn.Position = UDim2.new(startPosBtn.X.Scale, startPosBtn.X.Offset + delta.X, startPosBtn.Y.Scale, startPosBtn.Y.Offset + delta.Y) end end end)
+UserInputService.InputEnded:Connect(function(input)
+    if dragToggleBtn and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
+        dragToggleBtn = false
+        if not hasDraggedBtn then
+            isVisible = not isVisible
+            if isVisible then 
+                main.Visible = true 
+                TweenService:Create(main, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = UDim2.new(0, 580, 0, 380), GroupTransparency = 0}):Play()
+            else
+                TweenService:Create(main, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), {Size = UDim2.new(0, 530, 0, 330), GroupTransparency = 1}):Play()
+                task.delay(0.3, function() main.Visible = false end)
+            end
+        end
+    end
+end)
+
+-- Main UI Drag Logic
+local dragHandle = Instance.new("Frame", main); dragHandle.Size = UDim2.new(1, 0, 0, 50); dragHandle.BackgroundTransparency = 1; dragHandle.Active = true
+local dragToggleMain, dragStartMain, startPosMain = false, nil, nil
+dragHandle.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragToggleMain = true; dragStartMain = input.Position; startPosMain = main.Position end end)
+UserInputService.InputChanged:Connect(function(input) if dragToggleMain and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then local delta = input.Position - dragStartMain; main.Position = UDim2.new(startPosMain.X.Scale, startPosMain.X.Offset + delta.X, startPosMain.Y.Scale, startPosMain.Y.Offset + delta.Y) end end)
+UserInputService.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragToggleMain = false end end)
+
+-- [[ 1. LEFT SIDEBAR ]]
+local sidebar = Instance.new("Frame", main)
+sidebar.Size = UDim2.new(0, 160, 1, -30); sidebar.Position = UDim2.new(0, 15, 0, 15)
+sidebar.BackgroundColor3 = Theme.Surface; sidebar.BackgroundTransparency = 0.3
+createCorner(sidebar, 8); createStroke(sidebar, Theme.Border)
+
+local titleTxt = Instance.new("TextLabel", sidebar)
+titleTxt.Size = UDim2.new(1, 0, 0, 30); titleTxt.Position = UDim2.new(0, 0, 0, 10)
+titleTxt.Text = "JOIN ANYONE"; titleTxt.TextColor3 = Theme.Primary
+titleTxt.Font = Enum.Font.Code; titleTxt.TextSize = 14; titleTxt.BackgroundTransparency = 1; applyGlitchEffect(titleTxt)
+
+local avatarFrame = Instance.new("Frame", sidebar)
+avatarFrame.Size = UDim2.new(0, 70, 0, 70); avatarFrame.Position = UDim2.new(0.5, -35, 0, 55)
+avatarFrame.BackgroundColor3 = Theme.Background; createCorner(avatarFrame, 35); createStroke(avatarFrame, Theme.Primary, 2)
+local avatarImage = Instance.new("ImageLabel", avatarFrame)
+avatarImage.Size = UDim2.new(1, 0, 1, 0); avatarImage.BackgroundTransparency = 1; avatarImage.Image = "rbxasset://textures/ui/GuiImagePlaceholder.png"; createCorner(avatarImage, 35); applyGlitchEffect(avatarFrame)
+
+local snipeTabBtn = Instance.new("TextButton", sidebar)
+snipeTabBtn.Size = UDim2.new(0.8, 0, 0, 35); snipeTabBtn.Position = UDim2.new(0.1, 0, 0, 150)
+snipeTabBtn.BackgroundColor3 = Theme.Primary; snipeTabBtn.TextColor3 = Theme.Background
+snipeTabBtn.Font = Enum.Font.GothamBold; snipeTabBtn.TextSize = 12; snipeTabBtn.Text = "TARGET SNIPE"
+createCorner(snipeTabBtn, 6); applyHover(snipeTabBtn, Color3.fromRGB(0, 200, 80))
+
+local browserTabBtn = Instance.new("TextButton", sidebar)
+browserTabBtn.Size = UDim2.new(0.8, 0, 0, 35); browserTabBtn.Position = UDim2.new(0.1, 0, 0, 195)
+browserTabBtn.BackgroundColor3 = Theme.Background; browserTabBtn.TextColor3 = Theme.TextMuted
+browserTabBtn.Font = Enum.Font.GothamBold; browserTabBtn.TextSize = 12; browserTabBtn.Text = "SERVER BROWSER"
+createCorner(browserTabBtn, 6); createStroke(browserTabBtn, Theme.Border); applyHover(browserTabBtn, Theme.Surface)
+
+-- [[ ⚡ CONNECTING NEON LINE ]]
+local connectorLine = Instance.new("Frame", main)
+connectorLine.Size = UDim2.new(0, 15, 0, 2); connectorLine.Position = UDim2.new(0, 175, 0, 181) 
+connectorLine.BackgroundColor3 = Theme.Primary; connectorLine.BorderSizePixel = 0
+
+-- [[ 2. RIGHT CONTENT PANEL ]]
+local contentPanel = Instance.new("Frame", main)
+contentPanel.Size = UDim2.new(1, -205, 1, -30); contentPanel.Position = UDim2.new(0, 190, 0, 15)
+contentPanel.BackgroundColor3 = Theme.Surface; contentPanel.BackgroundTransparency = 0.3
+createCorner(contentPanel, 8); local contentStroke = createStroke(contentPanel, Theme.Primary, 1)
+
+local snipePage = Instance.new("Frame", contentPanel); snipePage.Size = UDim2.new(1, 0, 1, 0); snipePage.BackgroundTransparency = 1
+local browserPage = Instance.new("Frame", contentPanel); browserPage.Size = UDim2.new(1, 0, 1, 0); browserPage.BackgroundTransparency = 1; browserPage.Visible = false
+
+-- Tab Switching Logic
+snipeTabBtn.MouseButton1Click:Connect(function() 
+    snipePage.Visible, browserPage.Visible = true, false
+    snipeTabBtn.BackgroundColor3, snipeTabBtn.TextColor3 = Theme.Primary, Theme.Background
+    browserTabBtn.BackgroundColor3, browserTabBtn.TextColor3 = Theme.Background, Theme.TextMuted
+    TweenService:Create(connectorLine, TweenInfo.new(0.3, Enum.EasingStyle.Quint), {Position = UDim2.new(0, 175, 0, 181)}):Play()
+end)
+browserTabBtn.MouseButton1Click:Connect(function() 
+    snipePage.Visible, browserPage.Visible = false, true
+    browserTabBtn.BackgroundColor3, browserTabBtn.TextColor3 = Theme.Primary, Theme.Background
+    snipeTabBtn.BackgroundColor3, snipeTabBtn.TextColor3 = Theme.Background, Theme.TextMuted
+    TweenService:Create(connectorLine, TweenInfo.new(0.3, Enum.EasingStyle.Quint), {Position = UDim2.new(0, 175, 0, 226)}):Play()
+end)
+
+-- INPUT BOX HELPER
+local function CreateInputBox(parent, placeholder, yPos)
+    local bg = Instance.new("Frame", parent)
+    bg.Size = UDim2.new(0.9, 0, 0, 40); bg.Position = UDim2.new(0.05, 0, 0, yPos); bg.BackgroundColor3 = Theme.Background; createCorner(bg, 6); local stroke = createStroke(bg, Theme.Border)
+    local box = Instance.new("TextBox", bg)
+    box.Size = UDim2.new(1, -20, 1, 0); box.Position = UDim2.new(0, 10, 0, 0); box.BackgroundTransparency = 1; box.TextColor3 = Theme.Text; box.PlaceholderText = placeholder; box.PlaceholderColor3 = Theme.TextMuted; box.Font = Enum.Font.Code; box.TextSize = 13; box.TextXAlignment = Enum.TextXAlignment.Left; box.Text = ""
+    box.Focused:Connect(function() TweenService:Create(stroke, TweenInfo.new(0.2), {Color = Theme.Primary}):Play() end)
+    box.FocusLost:Connect(function() TweenService:Create(stroke, TweenInfo.new(0.2), {Color = Theme.Border}):Play() end)
+    return box
+end
+
+-- [[ SNIPE PAGE CONTENT ]]
+local sTitle = Instance.new("TextLabel", snipePage); sTitle.Size = UDim2.new(0.9, 0, 0, 25); sTitle.Position = UDim2.new(0.05, 0, 0, 10); sTitle.Text = "// ACQUIRE TARGET"; sTitle.TextColor3 = Theme.Primary; sTitle.Font = Enum.Font.GothamBold; sTitle.TextSize = 12; sTitle.TextXAlignment = Enum.TextXAlignment.Left; sTitle.BackgroundTransparency = 1
+local userBox = CreateInputBox(snipePage, "> Username or UserId", 40)
+local placeBox = CreateInputBox(snipePage, "> Place Id (Leave blank for current)", 90)
+
+local executeBtn = Instance.new("TextButton", snipePage)
+executeBtn.Size = UDim2.new(0.9, 0, 0, 45); executeBtn.Position = UDim2.new(0.05, 0, 0, 145)
+executeBtn.BackgroundColor3 = Theme.Background; executeBtn.TextColor3 = Theme.Primary
+executeBtn.Font = Enum.Font.Code; executeBtn.TextSize = 15; executeBtn.Text = "EXECUTE INJECTION"
+createCorner(executeBtn, 6); createStroke(executeBtn, Theme.Primary); applyHover(executeBtn, Color3.fromRGB(0, 40, 20))
+
+local logScroll = Instance.new("ScrollingFrame", snipePage)
+logScroll.Size = UDim2.new(0.9, 0, 0, 130); logScroll.Position = UDim2.new(0.05, 0, 0, 205)
+logScroll.BackgroundColor3 = Theme.Background; logScroll.BorderSizePixel = 0; logScroll.ScrollBarThickness = 2; logScroll.ScrollBarImageColor3 = Theme.Primary
+createCorner(logScroll, 6); createStroke(logScroll, Theme.Border)
+local listLog = Instance.new("UIListLayout", logScroll); listLog.VerticalAlignment = Enum.VerticalAlignment.Bottom; listLog.Padding = UDim.new(0, 2)
+
+local function AddLogEntry(text, color)
+    local entry = Instance.new("TextLabel", logScroll)
+    entry.Size = UDim2.new(1, -10, 0, 16); entry.Position = UDim2.new(0, 5, 0, 0)
+    entry.Text = "> " .. text; entry.TextColor3 = color or Theme.TextMuted; entry.Font = Enum.Font.Code; entry.TextSize = 11; entry.TextXAlignment = Enum.TextXAlignment.Left; entry.BackgroundTransparency = 1
+    task.spawn(function() for i=1,3 do entry.Visible = false; task.wait(0.04); entry.Visible = true; task.wait(0.04) end end)
+    logScroll.CanvasPosition = Vector2.new(0, 9999)
+end
+
+-- [[ BROWSER PAGE CONTENT ]]
+local bTitle = Instance.new("TextLabel", browserPage); bTitle.Size = UDim2.new(0.9, 0, 0, 25); bTitle.Position = UDim2.new(0.05, 0, 0, 10); bTitle.Text = "// NETWORK NODES"; bTitle.TextColor3 = Theme.Primary; bTitle.Font = Enum.Font.GothamBold; bTitle.TextSize = 12; bTitle.TextXAlignment = Enum.TextXAlignment.Left; bTitle.BackgroundTransparency = 1
+local bPlaceBox = CreateInputBox(browserPage, "> Place Id (Optional)", 40); bPlaceBox.Parent.Size = UDim2.new(0.75, 0, 0, 40)
+local refreshBtn = Instance.new("ImageButton", browserPage); refreshBtn.Size = UDim2.new(0, 40, 0, 40); refreshBtn.Position = UDim2.new(0.8, 0, 0, 40); refreshBtn.BackgroundColor3 = Theme.Background; refreshBtn.Image = "rbxassetid://6031094670"; refreshBtn.ImageColor3 = Theme.Primary; createCorner(refreshBtn, 6); createStroke(refreshBtn, Theme.Primary); applyHover(refreshBtn, Theme.Surface)
+
+local sList = Instance.new("ScrollingFrame", browserPage)
+sList.Size = UDim2.new(0.9, 0, 0, 210); sList.Position = UDim2.new(0.05, 0, 0, 90)
+sList.BackgroundColor3 = Theme.Background; sList.BackgroundTransparency = 1; sList.BorderSizePixel = 0; sList.ScrollBarThickness = 2; sList.ScrollBarImageColor3 = Theme.Primary
+local listLayout = Instance.new("UIListLayout", sList); listLayout.Padding = UDim.new(0, 6)
+
+local pControls = Instance.new("Frame", browserPage); pControls.Size = UDim2.new(0.9, 0, 0, 30); pControls.Position = UDim2.new(0.05, 0, 0, 310); pControls.BackgroundTransparency = 1
+local prevBtn = Instance.new("TextButton", pControls); prevBtn.Size = UDim2.new(0.25, 0, 1, 0); prevBtn.BackgroundColor3 = Theme.Background; prevBtn.TextColor3 = Theme.Text; prevBtn.Font = Enum.Font.Code; prevBtn.TextSize = 12; prevBtn.Text = "< BACK"; createCorner(prevBtn, 6); createStroke(prevBtn, Theme.Border); applyHover(prevBtn, Theme.Surface)
+local nextBtn = Instance.new("TextButton", pControls); nextBtn.Size = UDim2.new(0.25, 0, 1, 0); nextBtn.Position = UDim2.new(0.75, 0, 0, 0); nextBtn.BackgroundColor3 = Theme.Background; nextBtn.TextColor3 = Theme.Text; nextBtn.Font = Enum.Font.Code; nextBtn.TextSize = 12; nextBtn.Text = "NEXT >"; createCorner(nextBtn, 6); createStroke(nextBtn, Theme.Border); applyHover(nextBtn, Theme.Surface)
+local pLabel = Instance.new("TextLabel", pControls); pLabel.Size = UDim2.new(0.5, 0, 1, 0); pLabel.Position = UDim2.new(0.25, 0, 0, 0); pLabel.BackgroundTransparency = 1; pLabel.TextColor3 = Theme.Primary; pLabel.Font = Enum.Font.Code; pLabel.TextSize = 12; pLabel.Text = "PAGE 1"
+
+-- ==========================================
+-- 🚀 CORE LOGIC (SAFE JSON + NO PROXY SNIPE)
+-- ==========================================
+local searching, confirm, threads = false, false, 30
+
+local function safeJSONDecode(data) local s, res = pcall(function() return HttpService:JSONDecode(data) end); return s and res or nil end
+
+local function getServersDirect(id, cursor)
+    local fullurl = "https://games.roblox.com/v1/games/".. id .."/servers/Public?limit=100" .. (cursor and "&cursor="..cursor or "")
+    local s, r = pcall(function() return game:HttpGet(fullurl) end)
+    if s and r and r:sub(1,1) == "{" then local dec = safeJSONDecode(r); if dec then return true, dec end end
+    return false, nil
+end
+
+local function fetchThumbsDirect(tokens)
+    local payload = { Url = "https://thumbnails.roblox.com/v1/batch", Headers = { ["Content-Type"] = "application/json" }, Method = "POST", Body = {} }
+    for _, token in ipairs(tokens) do table.insert(payload.Body, {requestId = "0:"..token..":AvatarHeadshot:150x150:png:regular", type = "AvatarHeadShot", targetId = 0, token = token, format = "png", size = "150x150"}) end
+    local sEnc, encBody = pcall(function() return HttpService:JSONEncode(payload.Body) end); if not sEnc then return false, nil end
+    payload.Body = encBody
+    local s, r = pcall(function() return httprequest(payload) end)
+    if s and r and r.Success then local dec = safeJSONDecode(r.Body); if dec then return true, dec.data or dec end end
+    return false, nil
+end
+
+local function getTargetThumbDirect(userId)
+    local s, r = pcall(function() return game:HttpGet("https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=" .. userId .. "&format=Png&size=150x150&isCircular=false") end)
+    if s and r and r:sub(1,1) == "{" then local data = safeJSONDecode(r); if data and data.data and data.data[1] then return data.data[1].imageUrl end end
+    return ""
+end
+
+userBox.FocusLost:Connect(function()
+    local t = userBox.Text; if t ~= "" then task.spawn(function() local s, id = pcall(function() return tonumber(t) or Players:GetUserIdFromNameAsync(t) end) if s and id then avatarImage.Image = "rbxthumb://type=AvatarHeadShot&id=" .. id .. "&w=150&h=150" end end) else avatarImage.Image = "rbxasset://textures/ui/GuiImagePlaceholder.png" end
+end)
+
+executeBtn.MouseButton1Click:Connect(function()
+    if confirm then confirm = false; searching = false; executeBtn.Text = "EXECUTE INJECTION"; AddLogEntry("Sequence Aborted.", Theme.Error); return end
+    if searching then confirm = true; local old = executeBtn.Text; executeBtn.Text = "CONFIRM ABORT?"; AddLogEntry("Awaiting abort confirm...", Theme.Secondary); task.delay(4, function() if executeBtn.Text == "CONFIRM ABORT?" then confirm = false; executeBtn.Text = old end end); return end
+    
+    searching = true; executeBtn.Text = "ABORT INJECTION"; AddLogEntry("Bypassing firewalls...", Theme.Primary)
+    local username = userBox.Text
+    local s, userId = pcall(function() return tonumber(username) or Players:GetUserIdFromNameAsync(username) end)
+    if not s or not userId then searching = false; executeBtn.Text = "EXECUTE INJECTION"; AddLogEntry("Error: Target ID unresolvable.", Theme.Error); return end
+    
+    avatarImage.Image = "rbxthumb://type=AvatarHeadShot&id=" .. userId .. "&w=150&h=150"; AddLogEntry("Extracting image hashes...", Theme.Text)
+    local thumbnail = getTargetThumbDirect(userId); if thumbnail == "" then searching = false; executeBtn.Text = "EXECUTE INJECTION"; AddLogEntry("Direct Fetch Blocked. Execution halted.", Theme.Error); return end
+    
+    AddLogEntry("Target Locked: " .. userId, Theme.Primary); AddLogEntry("Scanning active nodes...", Theme.Text)
+    local placeId = tonumber(placeBox.Text)
+    if placeBox.Text:gsub("%s", "") == "" then placeId = game.PlaceId elseif not placeId then searching = false; executeBtn.Text = "EXECUTE INJECTION"; AddLogEntry("Invalid Place ID.", Theme.Error); return end
+    
+    local cursor, searched, playersCount = nil, 0, 0
+    task.spawn(function()
+        while searching do
+            local successFetch, result = getServersDirect(placeId, cursor)
+            if successFetch and result and result.data then
+                local servers = result.data; cursor = result.nextPageCursor
+                for index, server in ipairs(servers) do
+                    if not searching then break end
+                    task.spawn(function()
+                        if server.playerTokens and #server.playerTokens > 0 then
+                            local sThumb, thumbs = fetchThumbsDirect(server.playerTokens)
+                            if sThumb and thumbs then 
+                                playersCount = playersCount + #thumbs
+                                for _, pTh in ipairs(thumbs) do 
+                                    if pTh.imageUrl and pTh.imageUrl == thumbnail then 
+                                        searching = false; AddLogEntry("MATCH FOUND! TELEPORTING...", Theme.Primary)
+                                        TeleportService:TeleportToPlaceInstance(placeId, server.id, Players.LocalPlayer); return 
+                                    end 
+                                end 
+                            end
+                        end
+                    end)
+                    searched = searched + 1; AddLogEntry(string.format("Nodes: %d | Entities: %d", searched, playersCount), Theme.TextMuted)
+                    if index % threads ~= 0 then task.wait() end
+                end
+                if not cursor then break end
+            else AddLogEntry("Rate Limit. Delaying 2s...", Theme.TextMuted); task.wait(2) end
+            task.wait()
+        end
+        if searching then searching = false; executeBtn.Text = "EXECUTE INJECTION"; AddLogEntry("Search exhausted. Target missing.", Theme.Error) end
+    end)
+end)
+
+-- [[ BROWSER LOGIC (FIXED PAGINATION) ]]
+local cursors, currentPage = {""}, 1
+local function RenderFetch(path) local tUrl = "https://games.roblox.com" .. path; local s, r = pcall(function() return httprequest({Url = RENDER_PROXY, Method = "GET", Headers = {["Content-Type"] = "application/json", ["roblox-target"] = tUrl}}) end); if s and r and r.Success then return safeJSONDecode(r.Body) end return nil end
+
+local function loadServers(cursor)
+    for _, child in ipairs(sList:GetChildren()) do if child:IsA("Frame") then child:Destroy() end end
+    local pId = tonumber(bPlaceBox.Text) or game.PlaceId; pLabel.Text = "Fetching..."
+    task.spawn(function()
+        local data = RenderFetch("/v1/games/"..pId.."/servers/Public?sortOrder=Desc&limit=10" .. (cursor ~= "" and "&cursor="..cursor or ""))
+        if data and data.data then
+            for _, srv in ipairs(data.data) do
+                local item = Instance.new("Frame", sList); item.Size = UDim2.new(1, -10, 0, 50); item.BackgroundColor3 = Theme.Background; createCorner(item, 6); createStroke(item, Theme.Border)
+                
+                local info = Instance.new("TextLabel", item); info.Size = UDim2.new(0.6, 0, 1, 0); info.Position = UDim2.new(0, 15, 0, 0); info.BackgroundTransparency = 1; info.TextXAlignment = Enum.TextXAlignment.Left; info.TextColor3 = Theme.Text; info.Font = Enum.Font.Code; info.TextSize = 11
+                info.Text = string.format("ID: %s...\nUsers: %d / %d | Ping: %s", string.sub(srv.id, 1, 8), srv.playing, srv.maxPlayers, srv.ping and tostring(srv.ping).."ms" or "N/A")
+                
+                local copyBtn = Instance.new("TextButton", item); copyBtn.Size = UDim2.new(0, 45, 0, 30); copyBtn.Position = UDim2.new(1, -105, 0.5, -15); copyBtn.BackgroundColor3 = Theme.Background; copyBtn.TextColor3 = Theme.Primary; copyBtn.Font = Enum.Font.Code; copyBtn.TextSize = 10; copyBtn.Text = "COPY"; createCorner(copyBtn, 4); createStroke(copyBtn, Theme.Primary); applyHover(copyBtn, Theme.Surface)
+                copyBtn.MouseButton1Click:Connect(function() set_clipboard(tostring(srv.id)); copyBtn.Text = "COPIED!"; task.wait(1); copyBtn.Text = "COPY" end)
+
+                local joinSrvBtn = Instance.new("TextButton", item); joinSrvBtn.Size = UDim2.new(0, 45, 0, 30); joinSrvBtn.Position = UDim2.new(1, -55, 0.5, -15); joinSrvBtn.BackgroundColor3 = Theme.Primary; joinSrvBtn.TextColor3 = Theme.Background; joinSrvBtn.Font = Enum.Font.GothamBold; joinSrvBtn.TextSize = 11; joinSrvBtn.Text = "JOIN"; createCorner(joinSrvBtn, 4); applyHover(joinSrvBtn, Color3.fromRGB(0, 200, 80))
+                joinSrvBtn.MouseButton1Click:Connect(function() TeleportService:TeleportToPlaceInstance(pId, srv.id, Players.LocalPlayer) end)
+            end
+            sList.CanvasSize = UDim2.new(0, 0, 0, listLayout.AbsoluteContentSize.Y + 5)
+            if data.nextPageCursor and #cursors == currentPage then table.insert(cursors, data.nextPageCursor) end; pLabel.Text = "PAGE " .. currentPage
+        else pLabel.Text = "PROXY ERROR" end
+    end)
+end
+
+-- Reset Pagination when PlaceId changes
+bPlaceBox.FocusLost:Connect(function(enterPressed)
+    if enterPressed or bPlaceBox.Text ~= "" then cursors = {""}; currentPage = 1; loadServers("") end
+end)
+
+refreshBtn.MouseButton1Click:Connect(function() cursors, currentPage = {""}, 1; loadServers(""); TweenService:Create(refreshBtn, TweenInfo.new(0.5, Enum.EasingStyle.Cubic), {Rotation = refreshBtn.Rotation + 360}):Play(); task.delay(0.5, function() refreshBtn.Rotation = 0 end) end)
+nextBtn.MouseButton1Click:Connect(function() if cursors[currentPage + 1] then currentPage = currentPage + 1; loadServers(cursors[currentPage]) end end)
+prevBtn.MouseButton1Click:Connect(function() if currentPage > 1 then currentPage = currentPage - 1; loadServers(cursors[currentPage]) end end)
+loadServers("")
