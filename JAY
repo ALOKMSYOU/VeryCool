@@ -406,7 +406,6 @@ local spP = Instance.new("UIPadding", scT)
 spP.PaddingLeft = UDim.new(0, 8) spP.PaddingTop = UDim.new(0, 8) spP.PaddingBottom = UDim.new(0, 8)
 
 local iL = 0
--- เปลี่ยนชื่อเป็น aL แล้ว
 local function aL(t, c)
     iL = iL + 1
     local e = Instance.new("TextLabel", scT)
@@ -534,7 +533,7 @@ pLb.TextSize = 13
 pLb.Text = "PAGE 1 / 1"
 
 
--- ================= [ DATABASE TAB ] =================
+-- ================= [ DATABASE TAB (ระบบใหม่ล่าสุด) ] =================
 local l3 = Instance.new("UIListLayout", pg3)
 l3.Padding = UDim.new(0, 12)
 l3.HorizontalAlignment = Enum.HorizontalAlignment.Center
@@ -575,23 +574,42 @@ scG.AutomaticCanvasSize = Enum.AutomaticSize.Y
 local glL = Instance.new("UIListLayout", scG)
 glL.Padding = UDim.new(0, 8)
 
+-- [อัปเดต] เปลี่ยนไปดึงข้อมูลจากฐานข้อมูล Rolimons แทน Roblox API ที่โดนปิดไปแล้ว
 local function uFG(q)
-    local e = urlE(q)
-    local url = "https://games.roblox.com/v1/games/list?model.keyword=" .. e .. "&model.maxRows=40"
+    local qL = string.lower(q)
+    local vG = {}
     
-    local s1, r1 = pcall(function() return httprequest({Url = url, Method = "GET"}) end)
-    if s1 and r1 and r1.Success then local d = safeDec(r1.Body) if d and d.games then return d end end
+    local function fetchRolimons()
+        local url = "https://api.rolimons.com/games/v1/gamelist"
+        local s, r = pcall(function() return httprequest({Url = url, Method = "GET"}) end)
+        if s and r and r.Success then return r.Body end
+        local s2, r2 = pcall(function() return game:HttpGet(url) end)
+        if s2 and type(r2) == "string" then return r2 end
+        return nil
+    end
+
+    local body = fetchRolimons()
+    if body and string.sub(body, 1, 1) == "{" then
+        local d = safeDec(body)
+        if d and d.success and d.games then
+            for pId, gData in pairs(d.games) do
+                local gN = gData[1] or ""
+                local pC = tonumber(gData[2]) or 0
+                -- กรองเฉพาะแมพที่มีคนเล่น (>0) และชื่อตรงกับที่ค้นหา
+                if pC > 0 and string.find(string.lower(gN), qL, 1, true) then
+                    table.insert(vG, {
+                        placeId = tonumber(pId),
+                        name = gN,
+                        playerCount = pC,
+                        creatorName = "Rolimons DB"
+                    })
+                end
+            end
+        end
+    end
     
-    local s2, r2 = pcall(function() return game:HttpGet(url) end)
-    if s2 and r2 and r2:sub(1,1) == "{" then local d = safeDec(r2) if d and d.games then return d end end
-    
-    local eps = {
-        "https://games.roproxy.com/v1/games/list?model.keyword=" .. e .. "&model.maxRows=40",
-        "https://corsproxy.io/?https%3A%2F%2Fgames.roblox.com%2Fv1%2Fgames%2Flist%3Fmodel.keyword%3D" .. e .. "%26model.maxRows%3D40"
-    }
-    for _, ep in ipairs(eps) do
-        local s3, r3 = pcall(function() return game:HttpGet(ep) end)
-        if s3 and r3 and r3:sub(1,1) == "{" then local d = safeDec(r3) if d and d.games then return d end end
+    if #vG > 0 then
+        return {games = vG}
     end
     return nil
 end
@@ -663,19 +681,18 @@ bpBx.FocusLost:Connect(function() syID(bpBx.Text) end)
 gSBtn.MouseButton1Click:Connect(function()
     local q = gBx.Text
     if q == "" then return end
-    local qL = string.lower(q)
     for _, c in ipairs(scG:GetChildren()) do if c:IsA("Frame") or c:IsA("TextLabel") then c:Destroy() end end
     gSBtn.Text = "..."
     task.spawn(function()
         local d = uFG(q)
         if d and d.games then
-            local vG = {}
-            for _, g in ipairs(d.games) do
-                local gN = string.lower(g.name or "")
-                if (g.playerCount and g.playerCount > 0) and string.find(gN, qL, 1, true) then table.insert(vG, g) end
-            end
+            local vG = d.games
+            
+            -- จัดอันดับจากคนเล่นเยอะไปน้อย
             table.sort(vG, function(a,b) return (a.playerCount or 0) > (b.playerCount or 0) end)
-            local dC = math.min(#vG, 15)
+            
+            -- [อัปเดต] จำกัดการแสดงผลไว้สูงสุดแค่ 10 แมพ ตามคำขอ
+            local dC = math.min(#vG, 10) 
             if dC > 0 then
                 for i = 1, dC do
                     local g = vG[i]
@@ -729,7 +746,7 @@ gSBtn.MouseButton1Click:Connect(function()
                 local em = Instance.new("TextLabel", scG) em.Size = UDim2.new(1, 0, 0, 50) em.BackgroundTransparency = 1 em.TextColor3 = Theme.SubText em.Font = Enum.Font.Code em.TextSize = 13 em.Text = "NULL"
             end
         else
-            local em = Instance.new("TextLabel", scG) em.Size = UDim2.new(1, 0, 0, 50) em.BackgroundTransparency = 1 em.TextColor3 = Theme.Danger em.Font = Enum.Font.Code em.TextSize = 13 em.Text = "API_ERR_PROXY_BLOCKED"
+            local em = Instance.new("TextLabel", scG) em.Size = UDim2.new(1, 0, 0, 50) em.BackgroundTransparency = 1 em.TextColor3 = Theme.Danger em.Font = Enum.Font.Code em.TextSize = 13 em.Text = "MAP_NOT_FOUND_OR_BLOCKED"
         end
         gSBtn.Text = "GO"
     end)
@@ -759,7 +776,7 @@ eBtn.MouseButton1Click:Connect(function()
     local cr, sr, pC = nil, 0, 0
     task.spawn(function()
         local activeThreads = 0
-        local maxThreads = 10 -- เปลี่ยนลิมิตตรงนี้ (ถ้าแล็กให้ลดลงเหลือ 5)
+        local maxThreads = 10 -- ลิมิตกันแล็ก
         
         while sS do
             local sF, res = gSD(pId, cr)
@@ -768,7 +785,6 @@ eBtn.MouseButton1Click:Connect(function()
                 for idx, sv in ipairs(svs) do
                     if not sS then break end
                     
-                    -- คอยจนกว่าคิว Thread จะว่าง
                     while activeThreads >= maxThreads do RunService.Heartbeat:Wait() end
                     
                     activeThreads = activeThreads + 1
@@ -803,7 +819,7 @@ eBtn.MouseButton1Click:Connect(function()
                 aL("Rate Limit... สลับ API ชั่วคราว", Theme.Danger) 
                 task.wait(2) 
             end
-            task.wait(0.3) -- หน่วงเวลาก่อนโหลดหน้าถัดไป
+            task.wait(0.3)
         end
         if sS then sS = false eBtn.Text = "EXECUTE" aL("Target Ghosted.", Theme.Danger) end
     end)
@@ -921,7 +937,7 @@ ffBtn.MouseButton1Click:Connect(function()
         local pId = gID local cr = "" local fS = nil
         
         local activeThreads = 0
-        local maxThreads = 10 -- ลิมิต 10 เซิร์ฟเวอร์พร้อมกันสำหรับฝั่ง Finder 
+        local maxThreads = 10 
         
         while bSr do
             local sF, res = gSD(pId, cr)
@@ -959,7 +975,6 @@ ffBtn.MouseButton1Click:Connect(function()
             task.wait(0.3)
         end
         
-        -- รอจนกว่าคิวค้นหาทั้งหมดจะทำงานเสร็จเพื่อสรุปผล
         while activeThreads > 0 do RunService.Heartbeat:Wait() end
         
         bSr = false ffBtn.Text = "FIND"
