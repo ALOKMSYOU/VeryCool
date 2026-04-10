@@ -406,7 +406,7 @@ local spP = Instance.new("UIPadding", scT)
 spP.PaddingLeft = UDim.new(0, 8) spP.PaddingTop = UDim.new(0, 8) spP.PaddingBottom = UDim.new(0, 8)
 
 local iL = 0
--- [แก้ไข] เปลี่ยนชื่อฟังก์ชันจาก adL เป็น aL
+-- เปลี่ยนชื่อเป็น aL แล้ว
 local function aL(t, c)
     iL = iL + 1
     local e = Instance.new("TextLabel", scT)
@@ -609,22 +609,49 @@ local function gSD(id, c)
     return false, nil
 end
 
+-- ================= [ ระบบ Endpoint Rotation ของ API ดึงภาพ ] =================
+local ThumbnailAPIs = {
+    "https://thumbnails.roblox.com/v1/batch",
+    "https://thumbnails.roproxy.com/v1/batch",
+    "https://corsproxy.io/?https%3A%2F%2Fthumbnails.roblox.com%2Fv1%2Fbatch"
+}
+local currentApiIndex = 1
+
 local function fTDC(tk)
     local aT = {}
     for i = 1, #tk, 100 do
         local c = {unpack(tk, i, math.min(i + 99, #tk))}
-        local p = { Url = "https://thumbnails.roblox.com/v1/batch", Headers = { ["Content-Type"] = "application/json" }, Method = "POST", Body = {} }
-        for _, t in ipairs(c) do table.insert(p.Body, {requestId = "0:"..t..":AvatarHeadshot:150x150:png:regular", type = "AvatarHeadShot", targetId = 0, token = t, format = "png", size = "150x150"}) end
-        local sE, eB = pcall(function() return HttpService:JSONEncode(p.Body) end)
-        if sE then
-            p.Body = eB
-            local s, r = pcall(function() return httprequest(p) end)
-            if s and r and r.Success then local d = safeDec(r.Body) if d and d.data then for _, v in ipairs(d.data) do table.insert(aT, v) end end end
+        local success = false
+        local retryCount = 0
+        
+        while not success and retryCount < #ThumbnailAPIs do
+            local apiUrl = ThumbnailAPIs[currentApiIndex]
+            local p = { Url = apiUrl, Headers = { ["Content-Type"] = "application/json" }, Method = "POST", Body = {} }
+            for _, t in ipairs(c) do table.insert(p.Body, {requestId = "0:"..t..":AvatarHeadshot:150x150:png:regular", type = "AvatarHeadShot", targetId = 0, token = t, format = "png", size = "150x150"}) end
+            
+            local sE, eB = pcall(function() return HttpService:JSONEncode(p.Body) end)
+            if sE then
+                p.Body = eB
+                local s, r = pcall(function() return httprequest(p) end)
+                if s and r and (r.StatusCode == 200 or r.Success) then
+                    local d = safeDec(r.Body) 
+                    if d and d.data then for _, v in ipairs(d.data) do table.insert(aT, v) end end
+                    success = true
+                else
+                    currentApiIndex = currentApiIndex + 1
+                    if currentApiIndex > #ThumbnailAPIs then currentApiIndex = 1 end
+                    retryCount = retryCount + 1
+                    task.wait(0.2)
+                end
+            else
+                break
+            end
         end
     end
     if #aT > 0 then return true, aT end
     return false, nil
 end
+-- =========================================================================
 
 local gID = game.PlaceId
 local function syID(id)
@@ -731,27 +758,52 @@ eBtn.MouseButton1Click:Connect(function()
     local mS = tonumber(sBx.Text) if not mS or mS <= 0 then mS = 9999 end
     local cr, sr, pC = nil, 0, 0
     task.spawn(function()
+        local activeThreads = 0
+        local maxThreads = 10 -- เปลี่ยนลิมิตตรงนี้ (ถ้าแล็กให้ลดลงเหลือ 5)
+        
         while sS do
             local sF, res = gSD(pId, cr)
             if sF and res and res.data then
                 local svs = res.data cr = res.nextPageCursor
                 for idx, sv in ipairs(svs) do
                     if not sS then break end
+                    
+                    -- คอยจนกว่าคิว Thread จะว่าง
+                    while activeThreads >= maxThreads do RunService.Heartbeat:Wait() end
+                    
+                    activeThreads = activeThreads + 1
                     task.spawn(function()
                         if sv.playerTokens and #sv.playerTokens > 0 then
                             local tkS = {}
                             for i = 1, math.min(#sv.playerTokens, mS) do table.insert(tkS, sv.playerTokens[i]) end
                             if #tkS > 0 then
                                 local sth, ths = fTDC(tkS)
-                                if sth and ths then pC = pC + #ths for _, pt in ipairs(ths) do if pt.imageUrl and pt.imageUrl == th then sS = false aL("NODE FOUND! HYPERLINKING...", Theme.Primary) TeleportService:TeleportToPlaceInstance(pId, sv.id, Players.LocalPlayer) return end end end
+                                if sth and ths then 
+                                    pC = pC + #ths 
+                                    for _, pt in ipairs(ths) do 
+                                        if pt.imageUrl and pt.imageUrl == th then 
+                                            sS = false 
+                                            aL("NODE FOUND! HYPERLINKING...", Theme.Primary) 
+                                            TeleportService:TeleportToPlaceInstance(pId, sv.id, Players.LocalPlayer) 
+                                            return 
+                                        end 
+                                    end 
+                                end
                             end
                         end
+                        activeThreads = activeThreads - 1
                     end)
-                    sr = sr + 1 aL(string.format("Nodes: %03d | IDs: %04d", sr, pC), Theme.SubText) if idx % 30 ~= 0 then task.wait() end
+                    sr = sr + 1 
+                    aL(string.format("Nodes: %03d | IDs: %04d", sr, pC), Theme.SubText) 
+                    
+                    if idx % 10 == 0 then RunService.Heartbeat:Wait() end
                 end
                 if not cr then break end
-            else aL("Rate Limit...", Theme.Danger) task.wait(2) end
-            task.wait()
+            else 
+                aL("Rate Limit... สลับ API ชั่วคราว", Theme.Danger) 
+                task.wait(2) 
+            end
+            task.wait(0.3) -- หน่วงเวลาก่อนโหลดหน้าถัดไป
         end
         if sS then sS = false eBtn.Text = "EXECUTE" aL("Target Ghosted.", Theme.Danger) end
     end)
@@ -867,20 +919,60 @@ ffBtn.MouseButton1Click:Connect(function()
         if not s or not uid then bSr = false ffBtn.Text = "FIND" pLb.Text = "ERR: UID" return end
         local th = gTTD(uid) if th == "" then bSr = false ffBtn.Text = "FIND" pLb.Text = "ERR: API" return end
         local pId = gID local cr = "" local fS = nil
+        
+        local activeThreads = 0
+        local maxThreads = 10 -- ลิมิต 10 เซิร์ฟเวอร์พร้อมกันสำหรับฝั่ง Finder 
+        
         while bSr do
             local sF, res = gSD(pId, cr)
             if sF and res and res.data then
                 local svs = res.data cr = res.nextPageCursor
-                for _, sv in ipairs(svs) do
+                for idx, sv in ipairs(svs) do
                     if not bSr then break end
-                    if sv.playerTokens and #sv.playerTokens > 0 then local sth, ths = fTDC(sv.playerTokens) if sth and ths then for _, pt in ipairs(ths) do if pt.imageUrl and pt.imageUrl == th then fS = sv bSr = false break end end end end
-                    if fS then break end task.wait()
+                    
+                    while activeThreads >= maxThreads do RunService.Heartbeat:Wait() end
+                    
+                    activeThreads = activeThreads + 1
+                    task.spawn(function()
+                        if sv.playerTokens and #sv.playerTokens > 0 then 
+                            local sth, ths = fTDC(sv.playerTokens) 
+                            if sth and ths then 
+                                for _, pt in ipairs(ths) do 
+                                    if pt.imageUrl and pt.imageUrl == th then 
+                                        fS = sv 
+                                        bSr = false 
+                                        break 
+                                    end 
+                                end 
+                            end 
+                        end
+                        activeThreads = activeThreads - 1
+                    end)
+                    if fS then break end 
+                    
+                    if idx % 10 == 0 then RunService.Heartbeat:Wait() end
                 end
                 if fS or not cr then break end
-            else task.wait(2) end
+            else 
+                task.wait(2) 
+            end
+            task.wait(0.3)
         end
+        
+        -- รอจนกว่าคิวค้นหาทั้งหมดจะทำงานเสร็จเพื่อสรุปผล
+        while activeThreads > 0 do RunService.Heartbeat:Wait() end
+        
         bSr = false ffBtn.Text = "FIND"
-        if fS then aSv = {fS} cF = "All" for n, b in pairs(fBts) do TweenService:Create(b, TweenInfo.new(0.2), {BackgroundColor3 = (n == "All") and Theme.Primary or Theme.Item, TextColor3 = (n == "All") and Theme.BG or Theme.SubText}):Play() end aFi() pLb.Text = "FOUND" else pLb.Text = "GHOSTED" aSv = {} aFi() end
+        if fS then 
+            aSv = {fS} cF = "All" 
+            for n, b in pairs(fBts) do TweenService:Create(b, TweenInfo.new(0.2), {BackgroundColor3 = (n == "All") and Theme.Primary or Theme.Item, TextColor3 = (n == "All") and Theme.BG or Theme.SubText}):Play() end 
+            aFi() 
+            pLb.Text = "FOUND" 
+        else 
+            pLb.Text = "GHOSTED" 
+            aSv = {} 
+            aFi() 
+        end
     end)
 end)
 
