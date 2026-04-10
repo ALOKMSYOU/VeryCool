@@ -1,6 +1,6 @@
 local queue_on_teleport = queue_on_teleport or (syn and syn.queue_on_teleport) or (fluxus and fluxus.queue_on_teleport) or function() end
 
--- ใส่ลิ้งก์ Raw สคริปต์ของคุณแทนที่ข้อความด้านล่าง
+-- Pls Dont Leak This Code i build so long Time
 queue_on_teleport([[
     loadstring(game:HttpGet("https://raw.githubusercontent.com/ALOKMSYOU/VeryCool/refs/heads/main/JAY"))()
 ]])
