@@ -346,7 +346,6 @@ local function crI(p, ph, wOff)
     return bx, bg
 end
 
--- ================= [ SNIPER TAB ] =================
 local l1 = Instance.new("UIListLayout", pg1)
 l1.Padding = UDim.new(0, 12)
 l1.HorizontalAlignment = Enum.HorizontalAlignment.Center
@@ -428,8 +427,6 @@ local function aL(t, c)
 end
 clBtn.MouseButton1Click:Connect(function() iL = 0 for _, c in ipairs(scT:GetChildren()) do if c:IsA("TextLabel") then c:Destroy() end end end)
 
-
--- ================= [ BROWSER TAB ] =================
 local l2 = Instance.new("UIListLayout", pg2)
 l2.Padding = UDim.new(0, 12)
 l2.HorizontalAlignment = Enum.HorizontalAlignment.Center
@@ -532,8 +529,6 @@ pLb.Font = Enum.Font.Code
 pLb.TextSize = 13
 pLb.Text = "PAGE 1 / 1"
 
-
--- ================= [ DATABASE TAB (ระบบใหม่ล่าสุด) ] =================
 local l3 = Instance.new("UIListLayout", pg3)
 l3.Padding = UDim.new(0, 12)
 l3.HorizontalAlignment = Enum.HorizontalAlignment.Center
@@ -574,7 +569,6 @@ scG.AutomaticCanvasSize = Enum.AutomaticSize.Y
 local glL = Instance.new("UIListLayout", scG)
 glL.Padding = UDim.new(0, 8)
 
--- [อัปเดต] เปลี่ยนไปดึงข้อมูลจากฐานข้อมูล Rolimons แทน Roblox API ที่โดนปิดไปแล้ว
 local function uFG(q)
     local qL = string.lower(q)
     local vG = {}
@@ -595,7 +589,6 @@ local function uFG(q)
             for pId, gData in pairs(d.games) do
                 local gN = gData[1] or ""
                 local pC = tonumber(gData[2]) or 0
-                -- กรองเฉพาะแมพที่มีคนเล่น (>0) และชื่อตรงกับที่ค้นหา
                 if pC > 0 and string.find(string.lower(gN), qL, 1, true) then
                     table.insert(vG, {
                         placeId = tonumber(pId),
@@ -627,7 +620,6 @@ local function gSD(id, c)
     return false, nil
 end
 
--- ================= [ ระบบ Endpoint Rotation ของ API ดึงภาพ ] =================
 local ThumbnailAPIs = {
     "https://thumbnails.roblox.com/v1/batch",
     "https://thumbnails.roproxy.com/v1/batch",
@@ -669,7 +661,6 @@ local function fTDC(tk)
     if #aT > 0 then return true, aT end
     return false, nil
 end
--- =========================================================================
 
 local gID = game.PlaceId
 local function syID(id)
@@ -688,10 +679,8 @@ gSBtn.MouseButton1Click:Connect(function()
         if d and d.games then
             local vG = d.games
             
-            -- จัดอันดับจากคนเล่นเยอะไปน้อย
             table.sort(vG, function(a,b) return (a.playerCount or 0) > (b.playerCount or 0) end)
             
-            -- [อัปเดต] จำกัดการแสดงผลไว้สูงสุดแค่ 10 แมพ ตามคำขอ
             local dC = math.min(#vG, 10) 
             if dC > 0 then
                 for i = 1, dC do
@@ -776,7 +765,7 @@ eBtn.MouseButton1Click:Connect(function()
     local cr, sr, pC = nil, 0, 0
     task.spawn(function()
         local activeThreads = 0
-        local maxThreads = 10 -- ลิมิตกันแล็ก
+        local maxThreads = 10 
         
         while sS do
             local sF, res = gSD(pId, cr)
@@ -914,7 +903,7 @@ local function tLS()
     aSv = {} fSv = {}
     for _, c in ipairs(scB:GetChildren()) do if c:IsA("Frame") or c:IsA("TextLabel") then c:Destroy() end end
     local pId = gID
-    pLb.Text = "HACKING..."
+    pLb.Text = "Loading..."
     task.spawn(function()
         local sn = {} local function fPD(s, m) local c, p = "", 0 repeat local u = "https://games.roblox.com/v1/games/" .. pId .. "/servers/Public?sortOrder=" .. s .. "&limit=100" .. (c ~= "" and "&cursor=" .. c or "") local ok, r = pcall(function() return game:HttpGet(u) end) if ok and r and r:sub(1,1) == "{" then local d = safeDec(r) if d and d.data then for _, sv in ipairs(d.data) do if not sn[sv.id] then sn[sv.id] = true table.insert(aSv, sv) end end c = d.nextPageCursor or "" else break end else break end p = p + 1 until c == "" or p >= m end
         fPD("Desc", 3) fPD("Asc", 3) aFi()
