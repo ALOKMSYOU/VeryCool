@@ -987,3 +987,112 @@ ffBtn.MouseButton1Click:Connect(function()
 end)
 
 tLS()
+tBtn.Visible = false
+mG.Visible = false
+
+local KeySaveFile = "Keyscript.txt"
+local SecretKey = "TKEY5M"
+local ExpireSeconds = 540
+
+local function checkExistingKey()
+    if isfile and isfile(KeySaveFile) and readfile then
+        local savedTime = tonumber(readfile(KeySaveFile))
+        if savedTime and os.time() < savedTime then
+            return true, savedTime - os.time()
+        end
+    end
+    return false, 0
+end
+
+local isValid, timeLeft = checkExistingKey()
+
+if isValid then
+    tBtn.Visible = true
+    return
+end
+
+local KeyFrame = Instance.new("Frame", screenGui)
+KeyFrame.Size = UDim2.new(0, 300, 0, 160)
+KeyFrame.Position = UDim2.new(0.5, -150, 0.5, -80)
+KeyFrame.BackgroundColor3 = Theme.Panel
+KeyFrame.BorderSizePixel = 0
+rC(KeyFrame, 12)
+rS(KeyFrame, Theme.Primary, 2)
+
+local KeyTitle = Instance.new("TextLabel", KeyFrame)
+KeyTitle.Size = UDim2.new(1, 0, 0, 30)
+KeyTitle.Position = UDim2.new(0, 0, 0, 10)
+KeyTitle.BackgroundTransparency = 1
+KeyTitle.Text = "KEY AUTHENTICATION"
+KeyTitle.TextColor3 = Theme.Primary
+KeyTitle.Font = Enum.Font.GothamBlack
+KeyTitle.TextSize = 18
+
+local KeyBox = Instance.new("TextBox", KeyFrame)
+KeyBox.Size = UDim2.new(0.9, 0, 0, 35)
+KeyBox.Position = UDim2.new(0.05, 0, 0, 50)
+KeyBox.BackgroundColor3 = Theme.Item
+KeyBox.TextColor3 = Theme.Text
+KeyBox.PlaceholderText = "Enter your key here..."
+KeyBox.Font = Enum.Font.Code
+KeyBox.TextSize = 14
+KeyBox.TextXAlignment = Enum.TextXAlignment.Center
+rC(KeyBox, 6)
+rS(KeyBox, Theme.Border, 1.5)
+
+local VerifyBtn = Instance.new("TextButton", KeyFrame)
+VerifyBtn.Size = UDim2.new(0.9, 0, 0, 40)
+VerifyBtn.Position = UDim2.new(0.05, 0, 0, 100)
+VerifyBtn.BackgroundColor3 = Theme.Primary
+VerifyBtn.TextColor3 = Theme.BG
+VerifyBtn.Font = Enum.Font.GothamBlack
+VerifyBtn.TextSize = 15
+VerifyBtn.Text = "VERIFY KEY"
+rC(VerifyBtn, 6)
+aP(VerifyBtn)
+
+local StatusText = Instance.new("TextLabel", KeyFrame)
+StatusText.Size = UDim2.new(1, 0, 0, 20)
+StatusText.Position = UDim2.new(0, 0, 1, 5)
+StatusText.BackgroundTransparency = 1
+StatusText.Text = "Requires a valid key to inject."
+StatusText.TextColor3 = Theme.SubText
+StatusText.Font = Enum.Font.GothamBold
+StatusText.TextSize = 12
+
+KeyBox.Focused:Connect(function() 
+    TweenService:Create(KeyBox:FindFirstChildOfClass("UIStroke"), TweenInfo.new(0.2), {Color = Theme.Primary}):Play() 
+end)
+KeyBox.FocusLost:Connect(function() 
+    TweenService:Create(KeyBox:FindFirstChildOfClass("UIStroke"), TweenInfo.new(0.2), {Color = Theme.Border}):Play() 
+end)
+
+VerifyBtn.MouseButton1Click:Connect(function()
+    VerifyBtn.Text = "CHECKING..."
+    task.wait(0.5)
+    
+    if KeyBox.Text == SecretKey then
+        StatusText.TextColor3 = Theme.Primary
+        StatusText.Text = "SUCCESS"
+        VerifyBtn.Text = "APPROVED"
+        VerifyBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 50)
+        
+        if writefile then
+            pcall(function()
+                writefile(KeySaveFile, tostring(os.time() + ExpireSeconds))
+            end)
+        end
+        
+        task.wait(1)
+        
+        KeyFrame:Destroy()
+        StatusText:Destroy()
+        tBtn.Visible = true
+    else
+        StatusText.TextColor3 = Theme.Danger
+        StatusText.Text = "INVALID KEY"
+        VerifyBtn.Text = "VERIFY KEY"
+        KeyBox.Text = ""
+        TweenService:Create(KeyFrame, TweenInfo.new(0.05, Enum.EasingStyle.Sine, Enum.EasingDirection.Out, 3, true), {Position = KeyFrame.Position + UDim2.new(0, 10, 0, 0)}):Play()
+    end
+end)
