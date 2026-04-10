@@ -406,7 +406,8 @@ local spP = Instance.new("UIPadding", scT)
 spP.PaddingLeft = UDim.new(0, 8) spP.PaddingTop = UDim.new(0, 8) spP.PaddingBottom = UDim.new(0, 8)
 
 local iL = 0
-local function adL(t, c)
+-- [แก้ไข] เปลี่ยนชื่อฟังก์ชันจาก adL เป็น aL
+local function aL(t, c)
     iL = iL + 1
     local e = Instance.new("TextLabel", scT)
     e.Size = UDim2.new(1, -8, 0, 16)
