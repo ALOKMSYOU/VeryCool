@@ -992,7 +992,7 @@ mG.Visible = false
 
 local KeySaveFile = "Keyscript.txt"
 local SecretKey = "TKEY5M"
-local ExpireSeconds = 540
+local ExpireSeconds = 300
 
 local function checkExistingKey()
     if isfile and isfile(KeySaveFile) and readfile then
