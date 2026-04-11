@@ -1,6 +1,6 @@
 local queue_on_teleport = queue_on_teleport or (syn and syn.queue_on_teleport) or (fluxus and fluxus.queue_on_teleport) or function() end
 
--- Pls Dont Leak This Code i build so long Time
+-- Dont Leak Script
 queue_on_teleport([[
     loadstring(game:HttpGet("https://raw.githubusercontent.com/ALOKMSYOU/VeryCool/refs/heads/main/JAY"))()
 ]])
@@ -574,7 +574,6 @@ scG.ScrollBarImageColor3 = Theme.Primary
 scG.AutomaticCanvasSize = Enum.AutomaticSize.Y
 local glL = Instance.new("UIListLayout", scG)
 glL.Padding = UDim.new(0, 8)
-
 local function uFG(q)
     local qL = string.lower(q)
     local vG = {}
@@ -629,7 +628,8 @@ end
 local ThumbnailAPIs = {
     "https://thumbnails.roblox.com/v1/batch",
     "https://thumbnails.roproxy.com/v1/batch",
-    "https://corsproxy.io/?https%3A%2F%2Fthumbnails.roblox.com%2Fv1%2Fbatch"
+    "https://corsproxy.io/?https%3A%2F%2Fthumbnails.roblox.com%2Fv1%2Fbatch",
+    "https://api.allorigins.win/raw?url=https%3A%2F%2Fthumbnails.roblox.com%2Fv1%2Fbatch"
 }
 local currentApiIndex = 1
 
@@ -771,7 +771,7 @@ eBtn.MouseButton1Click:Connect(function()
     local cr, sr, pC = nil, 0, 0
     task.spawn(function()
         local activeThreads = 0
-        local maxThreads = 10 
+        local maxThreads = 6 
         
         while sS do
             local sF, res = gSD(pId, cr)
@@ -811,10 +811,9 @@ eBtn.MouseButton1Click:Connect(function()
                 end
                 if not cr then break end
             else 
-                aL("Rate Limit... สลับ API ชั่วคราว", Theme.Danger) 
-                task.wait(2) 
+                task.wait(5) 
             end
-            task.wait(0.3)
+            task.wait(1)
         end
         if sS then sS = false eBtn.Text = "EXECUTE" aL("Target Ghosted.", Theme.Danger) end
     end)
@@ -909,7 +908,7 @@ local function tLS()
     aSv = {} fSv = {}
     for _, c in ipairs(scB:GetChildren()) do if c:IsA("Frame") or c:IsA("TextLabel") then c:Destroy() end end
     local pId = gID
-    pLb.Text = "Loading..."
+    pLb.Text = "HACKING..."
     task.spawn(function()
         local sn = {} local function fPD(s, m) local c, p = "", 0 repeat local u = "https://games.roblox.com/v1/games/" .. pId .. "/servers/Public?sortOrder=" .. s .. "&limit=100" .. (c ~= "" and "&cursor=" .. c or "") local ok, r = pcall(function() return game:HttpGet(u) end) if ok and r and r:sub(1,1) == "{" then local d = safeDec(r) if d and d.data then for _, sv in ipairs(d.data) do if not sn[sv.id] then sn[sv.id] = true table.insert(aSv, sv) end end c = d.nextPageCursor or "" else break end else break end p = p + 1 until c == "" or p >= m end
         fPD("Desc", 3) fPD("Asc", 3) aFi()
@@ -932,7 +931,7 @@ ffBtn.MouseButton1Click:Connect(function()
         local pId = gID local cr = "" local fS = nil
         
         local activeThreads = 0
-        local maxThreads = 10 
+        local maxThreads = 6 
         
         while bSr do
             local sF, res = gSD(pId, cr)
@@ -965,9 +964,9 @@ ffBtn.MouseButton1Click:Connect(function()
                 end
                 if fS or not cr then break end
             else 
-                task.wait(2) 
+                task.wait(5) 
             end
-            task.wait(0.3)
+            task.wait(1)
         end
         
         while activeThreads > 0 do RunService.Heartbeat:Wait() end
@@ -987,112 +986,3 @@ ffBtn.MouseButton1Click:Connect(function()
 end)
 
 tLS()
-tBtn.Visible = false
-mG.Visible = false
-
-local KeySaveFile = "Keyscript.txt"
-local SecretKey = "TKEY5M"
-local ExpireSeconds = 300
-
-local function checkExistingKey()
-    if isfile and isfile(KeySaveFile) and readfile then
-        local savedTime = tonumber(readfile(KeySaveFile))
-        if savedTime and os.time() < savedTime then
-            return true, savedTime - os.time()
-        end
-    end
-    return false, 0
-end
-
-local isValid, timeLeft = checkExistingKey()
-
-if isValid then
-    tBtn.Visible = true
-    return
-end
-
-local KeyFrame = Instance.new("Frame", screenGui)
-KeyFrame.Size = UDim2.new(0, 300, 0, 160)
-KeyFrame.Position = UDim2.new(0.5, -150, 0.5, -80)
-KeyFrame.BackgroundColor3 = Theme.Panel
-KeyFrame.BorderSizePixel = 0
-rC(KeyFrame, 12)
-rS(KeyFrame, Theme.Primary, 2)
-
-local KeyTitle = Instance.new("TextLabel", KeyFrame)
-KeyTitle.Size = UDim2.new(1, 0, 0, 30)
-KeyTitle.Position = UDim2.new(0, 0, 0, 10)
-KeyTitle.BackgroundTransparency = 1
-KeyTitle.Text = "KEY AUTHENTICATION"
-KeyTitle.TextColor3 = Theme.Primary
-KeyTitle.Font = Enum.Font.GothamBlack
-KeyTitle.TextSize = 18
-
-local KeyBox = Instance.new("TextBox", KeyFrame)
-KeyBox.Size = UDim2.new(0.9, 0, 0, 35)
-KeyBox.Position = UDim2.new(0.05, 0, 0, 50)
-KeyBox.BackgroundColor3 = Theme.Item
-KeyBox.TextColor3 = Theme.Text
-KeyBox.PlaceholderText = "Enter your key here..."
-KeyBox.Font = Enum.Font.Code
-KeyBox.TextSize = 14
-KeyBox.TextXAlignment = Enum.TextXAlignment.Center
-rC(KeyBox, 6)
-rS(KeyBox, Theme.Border, 1.5)
-
-local VerifyBtn = Instance.new("TextButton", KeyFrame)
-VerifyBtn.Size = UDim2.new(0.9, 0, 0, 40)
-VerifyBtn.Position = UDim2.new(0.05, 0, 0, 100)
-VerifyBtn.BackgroundColor3 = Theme.Primary
-VerifyBtn.TextColor3 = Theme.BG
-VerifyBtn.Font = Enum.Font.GothamBlack
-VerifyBtn.TextSize = 15
-VerifyBtn.Text = "VERIFY KEY"
-rC(VerifyBtn, 6)
-aP(VerifyBtn)
-
-local StatusText = Instance.new("TextLabel", KeyFrame)
-StatusText.Size = UDim2.new(1, 0, 0, 20)
-StatusText.Position = UDim2.new(0, 0, 1, 5)
-StatusText.BackgroundTransparency = 1
-StatusText.Text = "Requires a valid key to inject."
-StatusText.TextColor3 = Theme.SubText
-StatusText.Font = Enum.Font.GothamBold
-StatusText.TextSize = 12
-
-KeyBox.Focused:Connect(function() 
-    TweenService:Create(KeyBox:FindFirstChildOfClass("UIStroke"), TweenInfo.new(0.2), {Color = Theme.Primary}):Play() 
-end)
-KeyBox.FocusLost:Connect(function() 
-    TweenService:Create(KeyBox:FindFirstChildOfClass("UIStroke"), TweenInfo.new(0.2), {Color = Theme.Border}):Play() 
-end)
-
-VerifyBtn.MouseButton1Click:Connect(function()
-    VerifyBtn.Text = "CHECKING..."
-    task.wait(0.5)
-    
-    if KeyBox.Text == SecretKey then
-        StatusText.TextColor3 = Theme.Primary
-        StatusText.Text = "SUCCESS"
-        VerifyBtn.Text = "APPROVED"
-        VerifyBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 50)
-        
-        if writefile then
-            pcall(function()
-                writefile(KeySaveFile, tostring(os.time() + ExpireSeconds))
-            end)
-        end
-        
-        task.wait(1)
-        
-        KeyFrame:Destroy()
-        StatusText:Destroy()
-        tBtn.Visible = true
-    else
-        StatusText.TextColor3 = Theme.Danger
-        StatusText.Text = "INVALID KEY"
-        VerifyBtn.Text = "VERIFY KEY"
-        KeyBox.Text = ""
-        TweenService:Create(KeyFrame, TweenInfo.new(0.05, Enum.EasingStyle.Sine, Enum.EasingDirection.Out, 3, true), {Position = KeyFrame.Position + UDim2.new(0, 10, 0, 0)}):Play()
-    end
-end)
