@@ -586,6 +586,7 @@ end
 local function uFG(q)
     local qL = string.lower(q)
     local vG = {}
+    
     local function fetchRolimons()
         local url = "https://api.rolimons.com/games/v1/gamelist"
         local s, r = pcall(function() return httprequest({Url = url, Method = "GET"}) end)
@@ -594,6 +595,7 @@ local function uFG(q)
         if s2 and type(r2) == "string" then return r2 end
         return nil
     end
+
     local body = fetchRolimons()
     if body and string.sub(body, 1, 1) == "{" then
         local d = safeDec(body)
@@ -612,80 +614,83 @@ local function uFG(q)
             end
         end
     end
-    if #vG > 0 then return {games = vG} end
+    
+    if #vG > 0 then
+        return {games = vG}
+    end
     return nil
 end
 
-local AvatarCache = {Head = "", Bust = "", Full = ""}
+local AvatarCache = {}
 
-local function getTargetAvatars(uid)
-    local urls = {
-        Head = "https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds="..uid.."&format=Png&size=150x150&isCircular=false",
-        Bust = "https://thumbnails.roblox.com/v1/users/avatar-bust?userIds="..uid.."&format=Png&size=150x150&isCircular=false",
-        Full = "https://thumbnails.roblox.com/v1/users/avatar?userIds="..uid.."&format=Png&size=150x150&isCircular=false"
-    }
-    local foundAny = false
-    for k, v in pairs(urls) do
-        local s, r = pcall(function() return game:HttpGet(v) end)
-        if s and r and r:sub(1,1) == "{" then
-            local d = safeDec(r)
-            if d and d.data and d.data[1] then 
-                AvatarCache[k] = d.data[1].imageUrl
-                foundAny = true
-            end
-        end
+local function getCachedAvatar(uid)
+    if AvatarCache[uid] then 
+        return AvatarCache[uid]
     end
-    return foundAny
+    
+    local s, r = pcall(function() return game:HttpGet("https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=" .. uid .. "&format=Png&size=150x150&isCircular=false") end)
+    if s and r and r:sub(1,1) == "{" then 
+        local d = safeDec(r) 
+        if d and d.data and d.data[1] then 
+            AvatarCache[uid] = d.data[1].imageUrl 
+            return AvatarCache[uid]
+        end 
+    end
+    return ""
 end
-
-local MobileUserAgent = "Roblox/v2.610.601 (Android; U; Android 13; en-us) RobloxApp/2.610.601"
 
 local function gSD(id, c)
     local cacheBuster = "&_t=" .. tostring(tick())
     local url = "https://games.roblox.com/v1/games/".. id .."/servers/Public?limit=100" .. (c and "&cursor="..c or "") .. cacheBuster
-    local s, r = pcall(function() 
-        return httprequest({Url = url, Method = "GET", Headers = {["User-Agent"] = MobileUserAgent}})
-    end)
-    if s and r and r.Body and r.Body:sub(1,1) == "{" then 
-        local d = safeDec(r.Body) 
+    local s, r = pcall(function() return game:HttpGet(url) end)
+    if s and r and r:sub(1,1) == "{" then 
+        local d = safeDec(r) 
         if d then return true, d end 
     end
     return false, nil
 end
 
-local OmniscientProxies = {
-    {url = "https://thumbnails.roblox.com/v1/batch", fails = 0},
-    {url = "https://corsproxy.io/?https%3A%2F%2Fthumbnails.roblox.com%2Fv1%2Fbatch", fails = 0},
-    {url = "https://api.allorigins.win/raw?url=https%3A%2F%2Fthumbnails.roblox.com%2Fv1%2Fbatch", fails = 0},
-    {url = "https://roproxy.com/v1/batch", fails = 0}
+local ProxyPool = {
+    {url = "https://thumbnails.roblox.com/v1/batch", fails = 0, region = "Direct"},
+    {url = "https://thumbnails.roproxy.com/v1/batch", fails = 0, region = "Global"},
+    {url = "https://corsproxy.io/?https%3A%2F%2Fthumbnails.roblox.com%2Fv1%2Fbatch", fails = 0, region = "EU"},
+    {url = "https://api.allorigins.win/raw?url=https%3A%2F%2Fthumbnails.roblox.com%2Fv1%2Fbatch", fails = 0, region = "US"}
 }
 
 local function getBestProxy()
-    table.sort(OmniscientProxies, function(a, b) return a.fails < b.fails end)
-    return OmniscientProxies[1]
+    table.sort(ProxyPool, function(a, b) return a.fails < b.fails end)
+    return ProxyPool[1]
 end
 
 local function fTDC(tk)
     local aT = {}
-    local types = {"AvatarHeadShot", "AvatarBust", "Avatar"}
     for i = 1, #tk, 100 do
         local c = {unpack(tk, i, math.min(i + 99, #tk))}
-        for _, reqType in ipairs(types) do
+        local success = false
+        local retryCount = 0
+        
+        while not success and retryCount < #ProxyPool do
             local bestProxy = getBestProxy()
-            local p = {Url = bestProxy.url, Headers = {["Content-Type"] = "application/json", ["User-Agent"] = MobileUserAgent}, Method = "POST", Body = {}}
-            for _, t in ipairs(c) do table.insert(p.Body, {requestId = "0:"..t..":"..reqType..":150x150:png:regular", type = reqType, targetId = 0, token = t, format = "png", size = "150x150"}) end
+            local apiUrl = bestProxy.url
+            local p = { Url = apiUrl, Headers = { ["Content-Type"] = "application/json" }, Method = "POST", Body = {} }
+            for _, t in ipairs(c) do table.insert(p.Body, {requestId = "0:"..t..":AvatarHeadshot:150x150:png:regular", type = "AvatarHeadShot", targetId = 0, token = t, format = "png", size = "150x150"}) end
+            
             local sE, eB = pcall(function() return HttpService:JSONEncode(p.Body) end)
             if sE then
                 p.Body = eB
                 local s, r = pcall(function() return httprequest(p) end)
-                if s and r and (r.StatusCode == 200 or r.Success) and r.Body then
+                if s and r and (r.StatusCode == 200 or r.Success) then
                     bestProxy.fails = 0
-                    local d = safeDec(r.Body)
+                    local d = safeDec(r.Body) 
                     if d and d.data then for _, v in ipairs(d.data) do table.insert(aT, v) end end
+                    success = true
                 else
                     bestProxy.fails = bestProxy.fails + 1
-                    task.wait(0.1)
+                    retryCount = retryCount + 1
+                    task.wait(0.2)
                 end
+            else
+                break
             end
         end
     end
@@ -764,7 +769,7 @@ gSBtn.MouseButton1Click:Connect(function()
                 local em = Instance.new("TextLabel", scG) em.Size = UDim2.new(1, 0, 0, 50) em.BackgroundTransparency = 1 em.TextColor3 = Theme.SubText em.Font = Enum.Font.Code em.TextSize = 13 em.Text = "NULL"
             end
         else
-            local em = Instance.new("TextLabel", scG) em.Size = UDim2.new(1, 0, 0, 50) em.BackgroundTransparency = 1 em.TextColor3 = Theme.Danger em.Font = Enum.Font.Code em.TextSize = 13 em.Text = "MAP_NOT_FOUND"
+            local em = Instance.new("TextLabel", scG) em.Size = UDim2.new(1, 0, 0, 50) em.BackgroundTransparency = 1 em.TextColor3 = Theme.Danger em.Font = Enum.Font.Code em.TextSize = 13 em.Text = "MAP_NOT_FOUND_OR_BLOCKED"
         end
         gSBtn.Text = "GO"
     end)
@@ -772,16 +777,7 @@ end)
 
 uBx.FocusLost:Connect(function()
     local t = uBx.Text
-    if t ~= "" then 
-        task.spawn(function() 
-            local s, id = pcall(function() return tonumber(t) or Players:GetUserIdFromNameAsync(t) end) 
-            if s and id then 
-                aImg.Image = "rbxthumb://type=AvatarHeadShot&id=" .. id .. "&w=150&h=150" 
-            end 
-        end) 
-    else 
-        aImg.Image = "rbxasset://textures/ui/GuiImagePlaceholder.png" 
-    end
+    if t ~= "" then task.spawn(function() local s, id = pcall(function() return tonumber(t) or Players:GetUserIdFromNameAsync(t) end) if s and id then aImg.Image = "rbxthumb://type=AvatarHeadShot&id=" .. id .. "&w=150&h=150" end end) else aImg.Image = "rbxasset://textures/ui/GuiImagePlaceholder.png" end
 end)
 
 local fpsHistory = {}
@@ -806,10 +802,8 @@ eBtn.MouseButton1Click:Connect(function()
     local s, uid = pcall(function() return tonumber(u) or Players:GetUserIdFromNameAsync(u) end)
     if not s or not uid then sS = false eBtn.Text = "EXECUTE" aL("Invalid UID.", Theme.Danger) return end
     aImg.Image = "rbxthumb://type=AvatarHeadShot&id=" .. uid .. "&w=150&h=150"
-    
-    local gotAvatars = getTargetAvatars(uid)
-    if not gotAvatars then sS = false eBtn.Text = "EXECUTE" aL("API Blocked.", Theme.Danger) return end
-    
+    local th = getCachedAvatar(uid)
+    if th == "" then sS = false eBtn.Text = "EXECUTE" aL("API Blocked.", Theme.Danger) return end
     aL("Locked UID: " .. uid, Theme.Primary)
     local pId = gID
     local mS = tonumber(sBx.Text) if not mS or mS <= 0 then mS = 9999 end
@@ -825,10 +819,6 @@ eBtn.MouseButton1Click:Connect(function()
                 for idx, sv in ipairs(svs) do
                     if not sS then break end
                     
-                    if sv.playing and sv.maxPlayers and sv.playing >= sv.maxPlayers then
-                        continue
-                    end
-                    
                     while activeThreads >= currentMaxThreads do RunService.Heartbeat:Wait() end
                     
                     activeThreads = activeThreads + 1
@@ -841,7 +831,7 @@ eBtn.MouseButton1Click:Connect(function()
                                 if sth and ths then 
                                     pC = pC + #ths 
                                     for _, pt in ipairs(ths) do 
-                                        if pt.imageUrl and (pt.imageUrl == AvatarCache.Head or pt.imageUrl == AvatarCache.Bust or pt.imageUrl == AvatarCache.Full) then 
+                                        if pt.imageUrl and pt.imageUrl == th then 
                                             sS = false 
                                             aL("NODE FOUND! HYPERLINKING...", Theme.Primary)
                                             playAlertSound()
@@ -861,10 +851,10 @@ eBtn.MouseButton1Click:Connect(function()
                 end
                 if not cr then break end
             else 
-                aL("Rate Limit... Rotating", Theme.Danger) 
-                task.wait(3) 
+                aL("Rate Limit... สลับ API ชั่วคราว", Theme.Danger) 
+                task.wait(5) 
             end
-            task.wait(0.5)
+            task.wait(1)
             
             local avgFPS = getAverageFPS()
             if avgFPS > 45 and currentMaxThreads < 15 then
@@ -968,9 +958,9 @@ local function tLS()
     aSv = {} fSv = {}
     for _, c in ipairs(scB:GetChildren()) do if c:IsA("Frame") or c:IsA("TextLabel") then c:Destroy() end end
     local pId = gID
-    pLb.Text = "HACKING..."
+    pLb.Text = "Loading..."
     task.spawn(function()
-        local sn = {} local function fPD(s, m) local c, p = "", 0 repeat local cacheBuster = "&_t=" .. tostring(tick()) local u = "https://games.roblox.com/v1/games/" .. pId .. "/servers/Public?sortOrder=" .. s .. "&limit=100" .. (c ~= "" and "&cursor=" .. c or "") .. cacheBuster local ok, r = pcall(function() return httprequest({Url = u, Method = "GET", Headers = {["User-Agent"] = MobileUserAgent}}) end) if ok and r and r.Body and r.Body:sub(1,1) == "{" then local d = safeDec(r.Body) if d and d.data then for _, sv in ipairs(d.data) do if not sn[sv.id] then sn[sv.id] = true table.insert(aSv, sv) end end c = d.nextPageCursor or "" else break end else break end p = p + 1 until c == "" or p >= m end
+        local sn = {} local function fPD(s, m) local c, p = "", 0 repeat local cacheBuster = "&_t=" .. tostring(tick()) local u = "https://games.roblox.com/v1/games/" .. pId .. "/servers/Public?sortOrder=" .. s .. "&limit=100" .. (c ~= "" and "&cursor=" .. c or "") .. cacheBuster local ok, r = pcall(function() return game:HttpGet(u) end) if ok and r and r:sub(1,1) == "{" then local d = safeDec(r) if d and d.data then for _, sv in ipairs(d.data) do if not sn[sv.id] then sn[sv.id] = true table.insert(aSv, sv) end end c = d.nextPageCursor or "" else break end else break end p = p + 1 until c == "" or p >= m end
         fPD("Desc", 3) fPD("Asc", 3) aFi()
     end)
 end
@@ -987,7 +977,7 @@ ffBtn.MouseButton1Click:Connect(function()
     task.spawn(function()
         local s, uid = pcall(function() return tonumber(ts) or Players:GetUserIdFromNameAsync(ts) end)
         if not s or not uid then bSr = false ffBtn.Text = "FIND" pLb.Text = "ERR: UID" return end
-        local gotAvatars = getTargetAvatars(uid) if not gotAvatars then bSr = false ffBtn.Text = "FIND" pLb.Text = "ERR: API" return end
+        local th = getCachedAvatar(uid) if th == "" then bSr = false ffBtn.Text = "FIND" pLb.Text = "ERR: API" return end
         local pId = gID local cr = "" local fS = nil
         
         local activeThreads = 0
@@ -1000,10 +990,6 @@ ffBtn.MouseButton1Click:Connect(function()
                 for idx, sv in ipairs(svs) do
                     if not bSr then break end
                     
-                    if sv.playing and sv.maxPlayers and sv.playing >= sv.maxPlayers then
-                        continue
-                    end
-                    
                     while activeThreads >= currentMaxThreads do RunService.Heartbeat:Wait() end
                     
                     activeThreads = activeThreads + 1
@@ -1012,7 +998,7 @@ ffBtn.MouseButton1Click:Connect(function()
                             local sth, ths = fTDC(sv.playerTokens) 
                             if sth and ths then 
                                 for _, pt in ipairs(ths) do 
-                                    if pt.imageUrl and (pt.imageUrl == AvatarCache.Head or pt.imageUrl == AvatarCache.Bust or pt.imageUrl == AvatarCache.Full) then 
+                                    if pt.imageUrl and pt.imageUrl == th then 
                                         fS = sv 
                                         bSr = false 
                                         playAlertSound()
@@ -1029,9 +1015,9 @@ ffBtn.MouseButton1Click:Connect(function()
                 end
                 if fS or not cr then break end
             else 
-                task.wait(3) 
+                task.wait(5) 
             end
-            task.wait(0.5)
+            task.wait(1)
             
             local avgFPS = getAverageFPS()
             if avgFPS > 45 and currentMaxThreads < 15 then
