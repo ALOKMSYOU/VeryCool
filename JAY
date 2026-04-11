@@ -908,7 +908,7 @@ local function tLS()
     aSv = {} fSv = {}
     for _, c in ipairs(scB:GetChildren()) do if c:IsA("Frame") or c:IsA("TextLabel") then c:Destroy() end end
     local pId = gID
-    pLb.Text = "HACKING..."
+    pLb.Text = "Loading..."
     task.spawn(function()
         local sn = {} local function fPD(s, m) local c, p = "", 0 repeat local u = "https://games.roblox.com/v1/games/" .. pId .. "/servers/Public?sortOrder=" .. s .. "&limit=100" .. (c ~= "" and "&cursor=" .. c or "") local ok, r = pcall(function() return game:HttpGet(u) end) if ok and r and r:sub(1,1) == "{" then local d = safeDec(r) if d and d.data then for _, sv in ipairs(d.data) do if not sn[sv.id] then sn[sv.id] = true table.insert(aSv, sv) end end c = d.nextPageCursor or "" else break end else break end p = p + 1 until c == "" or p >= m end
         fPD("Desc", 3) fPD("Asc", 3) aFi()
