@@ -69,13 +69,18 @@ local function safeDec(d)
     return s and r or nil
 end
 
-local function urlE(s)
-    if s then
-        s = string.gsub(s, "\n", "\r\n")
-        s = string.gsub(s, "([^%w %-%_%.%~])", function(c) return string.format("%%%02X", string.byte(c)) end)
-        s = string.gsub(s, " ", "+")
-    end
-    return s
+local function applyTex(p)
+    local t = Instance.new("ImageLabel", p)
+    t.Size = UDim2.new(1, 0, 1, 0)
+    t.BackgroundTransparency = 1
+    t.Image = "rbxassetid://3593361841" 
+    t.ImageTransparency = 0.85
+    t.ImageColor3 = Theme.Primary
+    t.ScaleType = Enum.ScaleType.Tile
+    t.TileSize = UDim2.new(0, 200, 0, 200)
+    t.ZIndex = p.ZIndex
+    rC(t, 12)
+    t.ClipsDescendants = true
 end
 
 local tBtn = Instance.new("TextButton", screenGui)
@@ -86,15 +91,29 @@ tBtn.Text = "JAO"
 tBtn.TextColor3 = Theme.Primary
 tBtn.Font = Enum.Font.GothamBlack
 tBtn.TextSize = 20
+tBtn.ZIndex = 50
 rC(tBtn, 28)
 local tBtnS = rS(tBtn, Theme.Primary, 2)
 aP(tBtn)
+
+local hBtn = Instance.new("TextButton", screenGui)
+hBtn.Size = UDim2.new(0, 46, 0, 46)
+hBtn.Position = UDim2.new(0.05, 5, 0.15, 65)
+hBtn.BackgroundColor3 = Theme.Item
+hBtn.Text = "HNT"
+hBtn.TextColor3 = Theme.Danger
+hBtn.Font = Enum.Font.GothamBlack
+hBtn.TextSize = 15
+hBtn.ZIndex = 50
+rC(hBtn, 23)
+rS(hBtn, Theme.Danger, 1.5)
+aP(hBtn)
 
 local pR = Instance.new("Frame", screenGui)
 pR.Size = UDim2.new(0, 56, 0, 56)
 pR.Position = tBtn.Position
 pR.BackgroundTransparency = 1
-pR.ZIndex = 0
+pR.ZIndex = 49
 rC(pR, 28)
 local pS = rS(pR, Theme.Primary, 2)
 
@@ -117,6 +136,7 @@ mG.Size = UDim2.new(0, 720, 0, 460)
 mG.Position = UDim2.new(0.5, 0, 0.5, 0)
 mG.BackgroundColor3 = Theme.BG
 mG.BorderSizePixel = 0
+mG.ZIndex = 10
 rC(mG, 14)
 local mGS = rS(mG, Theme.Primary, 2)
 
@@ -156,7 +176,7 @@ end)
 local rainC = Instance.new("Frame", mG)
 rainC.Size = UDim2.new(1, 0, 1, 0)
 rainC.BackgroundTransparency = 1
-rainC.ZIndex = 0
+rainC.ZIndex = 1
 rainC.ClipsDescendants = true
 task.spawn(function()
     local chars = {"0","1","ア","イ","ウ","エ","オ","カ","キ","ク","ケ","コ","X","Y","Z","@","#","$"}
@@ -181,11 +201,21 @@ local dF = Instance.new("Frame", mG)
 dF.Size = UDim2.new(1, 0, 0, 50)
 dF.BackgroundTransparency = 1
 dF.Active = true
-dF.ZIndex = 10
+dF.ZIndex = 20
 
 local isV, dtB, dsB, spB, hDB = true, false, nil, nil, false
 tBtn.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then dtB = true hDB = false dsB = i.Position spB = tBtn.Position end end)
-UserInputService.InputChanged:Connect(function(i) if dtB and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then local d = i.Position - dsB if d.Magnitude > 5 then hDB = true tBtn.Position = UDim2.new(spB.X.Scale, spB.X.Offset + d.X, spB.Y.Scale, spB.Y.Offset + d.Y) end end end)
+UserInputService.InputChanged:Connect(function(i) 
+    if dtB and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then 
+        local d = i.Position - dsB 
+        if d.Magnitude > 5 then 
+            hDB = true 
+            tBtn.Position = UDim2.new(spB.X.Scale, spB.X.Offset + d.X, spB.Y.Scale, spB.Y.Offset + d.Y) 
+            pR.Position = tBtn.Position
+            hBtn.Position = UDim2.new(tBtn.Position.X.Scale, tBtn.Position.X.Offset + 5, tBtn.Position.Y.Scale, tBtn.Position.Y.Offset + 65)
+        end 
+    end 
+end)
 UserInputService.InputEnded:Connect(function(i) if dtB and (i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch) then dtB = false if not hDB then isV = not isV if isV then mG.Visible = true TweenService:Create(mG, TweenInfo.new(0.6, Enum.EasingStyle.Elastic, Enum.EasingDirection.Out), {Size = UDim2.new(0, 720, 0, 460), GroupTransparency = 0}):Play() else TweenService:Create(mG, TweenInfo.new(0.3, Enum.EasingStyle.Sine, Enum.EasingDirection.In), {Size = UDim2.new(0, 600, 0, 400), GroupTransparency = 1}):Play() task.delay(0.3, function() mG.Visible = false end) end end end end)
 
 local dtM, dsM, spM = false, nil, nil
@@ -198,8 +228,10 @@ sB.Size = UDim2.new(0, 190, 1, -30)
 sB.Position = UDim2.new(0, 15, 0, 15)
 sB.BackgroundColor3 = Theme.Panel
 sB.BackgroundTransparency = 0.1
+sB.ZIndex = 11
 rC(sB, 12)
 rS(sB, Theme.Border, 1.5)
+applyTex(sB)
 
 local tL = Instance.new("TextLabel", sB)
 tL.Size = UDim2.new(1, 0, 0, 40)
@@ -209,6 +241,7 @@ tL.TextColor3 = Theme.Primary
 tL.Font = Enum.Font.GothamBlack
 tL.TextSize = 17
 tL.BackgroundTransparency = 1
+tL.ZIndex = 12
 local tLS = Instance.new("UIStroke", tL)
 tLS.Color = Theme.Primary
 tLS.Transparency = 0.7
@@ -219,6 +252,7 @@ aImg.Size = UDim2.new(0, 80, 0, 80)
 aImg.Position = UDim2.new(0.5, -40, 0, 65)
 aImg.BackgroundColor3 = Theme.Item
 aImg.Image = "rbxasset://textures/ui/GuiImagePlaceholder.png"
+aImg.ZIndex = 12
 rC(aImg, 40)
 local aImgS = rS(aImg, Theme.Primary, 2)
 
@@ -226,6 +260,7 @@ local crossH1 = Instance.new("Frame", aImg)
 crossH1.Size = UDim2.new(1.3, 0, 1.3, 0)
 crossH1.Position = UDim2.new(-0.15, 0, -0.15, 0)
 crossH1.BackgroundTransparency = 1
+crossH1.ZIndex = 12
 local chS1 = rS(crossH1, Theme.Primary, 1)
 chS1.Transparency = 0.5
 rC(crossH1, 60)
@@ -234,6 +269,7 @@ local crossH2 = Instance.new("Frame", aImg)
 crossH2.Size = UDim2.new(1.15, 0, 1.15, 0)
 crossH2.Position = UDim2.new(-0.075, 0, -0.075, 0)
 crossH2.BackgroundTransparency = 1
+crossH2.ZIndex = 12
 local chS2 = rS(crossH2, Theme.Primary, 1)
 chS2.LineJoinMode = Enum.LineJoinMode.Bevel
 chS2.Transparency = 0.3
@@ -256,6 +292,7 @@ local function crT(p, t)
     b.TextSize = 13
     b.Text = t
     b.AutoButtonColor = false
+    b.ZIndex = 12
     rC(b, 8)
     local s = rS(b, Theme.Border, 1.5)
     aP(b)
@@ -267,6 +304,7 @@ local bC = Instance.new("Frame", sB)
 bC.Size = UDim2.new(1, 0, 0, 180)
 bC.Position = UDim2.new(0, 0, 0, 175)
 bC.BackgroundTransparency = 1
+bC.ZIndex = 12
 local bCL = Instance.new("UIListLayout", bC)
 bCL.Padding = UDim.new(0, 12)
 bCL.HorizontalAlignment = Enum.HorizontalAlignment.Center
@@ -280,18 +318,21 @@ cP.Size = UDim2.new(1, -230, 1, -30)
 cP.Position = UDim2.new(0, 215, 0, 15)
 cP.BackgroundColor3 = Theme.Panel
 cP.BackgroundTransparency = 0.15
+cP.ZIndex = 11
 rC(cP, 12)
 local cPS = rS(cP, Theme.Primary, 1.5)
+applyTex(cP)
 
-local pg1 = Instance.new("Frame", cP) pg1.Size = UDim2.new(1, 0, 1, 0) pg1.BackgroundTransparency = 1
-local pg2 = Instance.new("Frame", cP) pg2.Size = UDim2.new(1, 0, 1, 0) pg2.BackgroundTransparency = 1 pg2.Visible = false
-local pg3 = Instance.new("Frame", cP) pg3.Size = UDim2.new(1, 0, 1, 0) pg3.BackgroundTransparency = 1 pg3.Visible = false
+local pg1 = Instance.new("Frame", cP) pg1.Size = UDim2.new(1, 0, 1, 0) pg1.BackgroundTransparency = 1 pg1.ZIndex = 12
+local pg2 = Instance.new("Frame", cP) pg2.Size = UDim2.new(1, 0, 1, 0) pg2.BackgroundTransparency = 1 pg2.Visible = false pg2.ZIndex = 12
+local pg3 = Instance.new("Frame", cP) pg3.Size = UDim2.new(1, 0, 1, 0) pg3.BackgroundTransparency = 1 pg3.Visible = false pg3.ZIndex = 12
 
 local cLine = Instance.new("Frame", mG)
 cLine.Size = UDim2.new(0, 4, 0, 24)
 cLine.Position = UDim2.new(0, 205, 0, 199)
 cLine.BackgroundColor3 = Theme.Primary
 cLine.BorderSizePixel = 0
+cLine.ZIndex = 13
 rC(cLine, 2)
 
 local function swT(n)
@@ -325,6 +366,7 @@ local function crI(p, ph, wOff)
     local bg = Instance.new("Frame", p)
     bg.Size = UDim2.new(1, -(wOff or 0), 1, 0)
     bg.BackgroundColor3 = Theme.Item
+    bg.ZIndex = 12
     rC(bg, 8)
     local s = rS(bg, Theme.Border, 1.5)
     
@@ -333,6 +375,7 @@ local function crI(p, ph, wOff)
     dL.Position = UDim2.new(0, 0, 0.3, 0)
     dL.BackgroundColor3 = Theme.Primary
     dL.BackgroundTransparency = 1
+    dL.ZIndex = 12
     rC(dL, 1)
     
     local bx = Instance.new("TextBox", bg)
@@ -346,6 +389,7 @@ local function crI(p, ph, wOff)
     bx.TextSize = 13
     bx.TextXAlignment = Enum.TextXAlignment.Left
     bx.Text = ""
+    bx.ZIndex = 13
     
     bx.Focused:Connect(function() TweenService:Create(s, TweenInfo.new(0.2), {Color = Theme.Primary}):Play() TweenService:Create(dL, TweenInfo.new(0.2), {BackgroundTransparency = 0}):Play() end)
     bx.FocusLost:Connect(function() TweenService:Create(s, TweenInfo.new(0.2), {Color = Theme.Border}):Play() TweenService:Create(dL, TweenInfo.new(0.2), {BackgroundTransparency = 1}):Play() end)
@@ -366,10 +410,11 @@ t1.Font = Enum.Font.Code
 t1.TextSize = 15
 t1.TextXAlignment = Enum.TextXAlignment.Left
 t1.BackgroundTransparency = 1
+t1.ZIndex = 12
 
-local uBxC = Instance.new("Frame", pg1) uBxC.Size = UDim2.new(0.92, 0, 0, 42) uBxC.BackgroundTransparency = 1
-local pBxC = Instance.new("Frame", pg1) pBxC.Size = UDim2.new(0.92, 0, 0, 42) pBxC.BackgroundTransparency = 1
-local sBxC = Instance.new("Frame", pg1) sBxC.Size = UDim2.new(0.92, 0, 0, 42) sBxC.BackgroundTransparency = 1
+local uBxC = Instance.new("Frame", pg1) uBxC.Size = UDim2.new(0.92, 0, 0, 42) uBxC.BackgroundTransparency = 1 uBxC.ZIndex = 12
+local pBxC = Instance.new("Frame", pg1) pBxC.Size = UDim2.new(0.92, 0, 0, 42) pBxC.BackgroundTransparency = 1 pBxC.ZIndex = 12
+local sBxC = Instance.new("Frame", pg1) sBxC.Size = UDim2.new(0.92, 0, 0, 42) sBxC.BackgroundTransparency = 1 sBxC.ZIndex = 12
 
 local uBx = crI(uBxC, "Target Username or UserId", 0)
 local pBx = crI(pBxC, "Place ID (Blank = Current)", 0)
@@ -378,6 +423,7 @@ local sBx = crI(sBxC, "Max Scans (Blank = Full)", 0)
 local actC = Instance.new("Frame", pg1)
 actC.Size = UDim2.new(0.92, 0, 0, 42)
 actC.BackgroundTransparency = 1
+actC.ZIndex = 12
 local eBtn = Instance.new("TextButton", actC)
 eBtn.Size = UDim2.new(0.7, -6, 1, 0)
 eBtn.BackgroundColor3 = Theme.Primary
@@ -385,6 +431,7 @@ eBtn.TextColor3 = Theme.BG
 eBtn.Font = Enum.Font.GothamBlack
 eBtn.TextSize = 15
 eBtn.Text = "EXECUTE"
+eBtn.ZIndex = 12
 rC(eBtn, 8) aP(eBtn)
 local clBtn = Instance.new("TextButton", actC)
 clBtn.Size = UDim2.new(0.3, -6, 1, 0)
@@ -394,6 +441,7 @@ clBtn.TextColor3 = Theme.Danger
 clBtn.Font = Enum.Font.GothamBlack
 clBtn.TextSize = 15
 clBtn.Text = "CLEAR"
+clBtn.ZIndex = 12
 rC(clBtn, 8) rS(clBtn, Theme.Danger, 1.5) aH(clBtn, Color3.fromRGB(50, 10, 10)) aP(clBtn)
 
 local scT = Instance.new("ScrollingFrame", pg1)
@@ -404,6 +452,7 @@ scT.BorderSizePixel = 0
 scT.ScrollBarThickness = 2
 scT.ScrollBarImageColor3 = Theme.Primary
 scT.AutomaticCanvasSize = Enum.AutomaticSize.Y
+scT.ZIndex = 12
 rC(scT, 8) rS(scT, Theme.Border, 1.5)
 local slL = Instance.new("UIListLayout", scT)
 slL.Padding = UDim.new(0, 4)
@@ -421,6 +470,7 @@ local function aL(t, c)
     e.TextSize = 12
     e.TextXAlignment = Enum.TextXAlignment.Left
     e.BackgroundTransparency = 1
+    e.ZIndex = 13
     scT.CanvasPosition = Vector2.new(0, 9999)
     task.spawn(function()
         local fullText = string.format("[SYS] %s", t)
@@ -447,10 +497,12 @@ t2.Font = Enum.Font.Code
 t2.TextSize = 15
 t2.TextXAlignment = Enum.TextXAlignment.Left
 t2.BackgroundTransparency = 1
+t2.ZIndex = 12
 
 local srC1 = Instance.new("Frame", pg2)
 srC1.Size = UDim2.new(0.92, 0, 0, 42)
 srC1.BackgroundTransparency = 1
+srC1.ZIndex = 12
 local bpBx = crI(srC1, "Place ID (Optional)", 52)
 local rfBtn = Instance.new("ImageButton", srC1)
 rfBtn.Size = UDim2.new(0, 42, 1, 0)
@@ -458,11 +510,13 @@ rfBtn.Position = UDim2.new(1, -42, 0, 0)
 rfBtn.BackgroundColor3 = Theme.Item
 rfBtn.Image = "rbxassetid://6031094670"
 rfBtn.ImageColor3 = Theme.Primary
+rfBtn.ZIndex = 13
 rC(rfBtn, 8) rS(rfBtn, Theme.Border, 1.5) aH(rfBtn, Color3.fromRGB(0, 40, 20), Theme.Primary) aP(rfBtn)
 
 local srC2 = Instance.new("Frame", pg2)
 srC2.Size = UDim2.new(0.92, 0, 0, 42)
 srC2.BackgroundTransparency = 1
+srC2.ZIndex = 12
 local bfBx = crI(srC2, "Find Player (User/ID)", 52)
 local ffBtn = Instance.new("TextButton", srC2)
 ffBtn.Size = UDim2.new(0, 42, 1, 0)
@@ -472,11 +526,13 @@ ffBtn.TextColor3 = Theme.BG
 ffBtn.Font = Enum.Font.GothamBlack
 ffBtn.TextSize = 10
 ffBtn.Text = "FIND"
+ffBtn.ZIndex = 13
 rC(ffBtn, 8) aP(ffBtn)
 
 local flC = Instance.new("Frame", pg2)
 flC.Size = UDim2.new(0.92, 0, 0, 28)
 flC.BackgroundTransparency = 1
+flC.ZIndex = 12
 local fLay = Instance.new("UIListLayout", flC)
 fLay.FillDirection = Enum.FillDirection.Horizontal
 fLay.SortOrder = Enum.SortOrder.LayoutOrder
@@ -491,6 +547,7 @@ for i, f in ipairs(FLT) do
     b.Font = Enum.Font.GothamBold
     b.TextSize = 11
     b.Text = string.upper(f)
+    b.ZIndex = 13
     rC(b, 6) rS(b, Theme.Border, 1.5) aP(b)
     fBts[f] = b
 end
@@ -503,12 +560,14 @@ scB.BorderSizePixel = 0
 scB.ScrollBarThickness = 2
 scB.ScrollBarImageColor3 = Theme.Primary
 scB.AutomaticCanvasSize = Enum.AutomaticSize.Y
+scB.ZIndex = 12
 local blL = Instance.new("UIListLayout", scB)
 blL.Padding = UDim.new(0, 8)
 
 local pgC = Instance.new("Frame", pg2)
 pgC.Size = UDim2.new(0.92, 0, 0, 32)
 pgC.BackgroundTransparency = 1
+pgC.ZIndex = 12
 local pvB = Instance.new("TextButton", pgC)
 pvB.Size = UDim2.new(0, 80, 1, 0)
 pvB.BackgroundColor3 = Theme.Item
@@ -516,6 +575,7 @@ pvB.TextColor3 = Theme.Primary
 pvB.Font = Enum.Font.GothamBlack
 pvB.TextSize = 12
 pvB.Text = "◀ BACK"
+pvB.ZIndex = 13
 rC(pvB, 6) rS(pvB, Theme.Primary, 1.5) aH(pvB, Color3.fromRGB(0, 40, 20)) aP(pvB)
 local nxB = Instance.new("TextButton", pgC)
 nxB.Size = UDim2.new(0, 80, 1, 0)
@@ -525,6 +585,7 @@ nxB.TextColor3 = Theme.Primary
 nxB.Font = Enum.Font.GothamBlack
 nxB.TextSize = 12
 nxB.Text = "NEXT ▶"
+nxB.ZIndex = 13
 rC(nxB, 6) rS(nxB, Theme.Primary, 1.5) aH(nxB, Color3.fromRGB(0, 40, 20)) aP(nxB)
 local pLb = Instance.new("TextLabel", pgC)
 pLb.Size = UDim2.new(1, -180, 1, 0)
@@ -534,6 +595,7 @@ pLb.TextColor3 = Theme.Primary
 pLb.Font = Enum.Font.Code
 pLb.TextSize = 13
 pLb.Text = "PAGE 1 / 1"
+pLb.ZIndex = 13
 
 local l3 = Instance.new("UIListLayout", pg3)
 l3.Padding = UDim.new(0, 12)
@@ -549,10 +611,12 @@ t3.Font = Enum.Font.Code
 t3.TextSize = 15
 t3.TextXAlignment = Enum.TextXAlignment.Left
 t3.BackgroundTransparency = 1
+t3.ZIndex = 12
 
 local srC3 = Instance.new("Frame", pg3)
 srC3.Size = UDim2.new(0.92, 0, 0, 42)
 srC3.BackgroundTransparency = 1
+srC3.ZIndex = 12
 local gBx = crI(srC3, "Enter Exact Game Name...", 52)
 local gSBtn = Instance.new("TextButton", srC3)
 gSBtn.Size = UDim2.new(0, 42, 1, 0)
@@ -562,6 +626,7 @@ gSBtn.TextColor3 = Theme.BG
 gSBtn.Font = Enum.Font.GothamBlack
 gSBtn.TextSize = 12
 gSBtn.Text = "GO"
+gSBtn.ZIndex = 13
 rC(gSBtn, 8) aP(gSBtn)
 
 local scG = Instance.new("ScrollingFrame", pg3)
@@ -572,6 +637,7 @@ scG.BorderSizePixel = 0
 scG.ScrollBarThickness = 2
 scG.ScrollBarImageColor3 = Theme.Primary
 scG.AutomaticCanvasSize = Enum.AutomaticSize.Y
+scG.ZIndex = 12
 local glL = Instance.new("UIListLayout", scG)
 glL.Padding = UDim.new(0, 8)
 local function playAlertSound()
@@ -586,7 +652,6 @@ end
 local function uFG(q)
     local qL = string.lower(q)
     local vG = {}
-    
     local function fetchRolimons()
         local url = "https://api.rolimons.com/games/v1/gamelist"
         local s, r = pcall(function() return httprequest({Url = url, Method = "GET"}) end)
@@ -595,7 +660,6 @@ local function uFG(q)
         if s2 and type(r2) == "string" then return r2 end
         return nil
     end
-
     local body = fetchRolimons()
     if body and string.sub(body, 1, 1) == "{" then
         local d = safeDec(body)
@@ -614,83 +678,84 @@ local function uFG(q)
             end
         end
     end
-    
-    if #vG > 0 then
-        return {games = vG}
-    end
+    if #vG > 0 then return {games = vG} end
     return nil
 end
 
-local AvatarCache = {}
+local AvatarCache = {Head = "", Bust = "", Full = ""}
 
-local function getCachedAvatar(uid)
-    if AvatarCache[uid] then 
-        return AvatarCache[uid]
+local function getTargetAvatars(uid)
+    local endpoints = {
+        Head = "v1/users/avatar-headshot?userIds="..uid.."&format=Png&size=150x150&isCircular=false",
+        Bust = "v1/users/avatar-bust?userIds="..uid.."&format=Png&size=150x150&isCircular=false",
+        Full = "v1/users/avatar?userIds="..uid.."&format=Png&size=150x150&isCircular=false"
+    }
+    local proxies = {"https://thumbnails.roproxy.com/", "https://thumbnails.roblox.com/"}
+    local foundAny = false
+    for k, ep in pairs(endpoints) do
+        for _, px in ipairs(proxies) do
+            local s, r = pcall(function() return game:HttpGet(px .. ep) end)
+            if s and r and r:sub(1,1) == "{" then
+                local d = safeDec(r)
+                if d and d.data and d.data[1] then 
+                    AvatarCache[k] = d.data[1].imageUrl
+                    foundAny = true
+                    break
+                end
+            end
+        end
     end
-    
-    local s, r = pcall(function() return game:HttpGet("https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=" .. uid .. "&format=Png&size=150x150&isCircular=false") end)
-    if s and r and r:sub(1,1) == "{" then 
-        local d = safeDec(r) 
-        if d and d.data and d.data[1] then 
-            AvatarCache[uid] = d.data[1].imageUrl 
-            return AvatarCache[uid]
-        end 
-    end
-    return ""
+    return foundAny
 end
+
+local MobileUserAgent = "Roblox/v2.610.601 (Android; U; Android 13; en-us) RobloxApp/2.610.601"
 
 local function gSD(id, c)
     local cacheBuster = "&_t=" .. tostring(tick())
     local url = "https://games.roblox.com/v1/games/".. id .."/servers/Public?limit=100" .. (c and "&cursor="..c or "") .. cacheBuster
-    local s, r = pcall(function() return game:HttpGet(url) end)
-    if s and r and r:sub(1,1) == "{" then 
-        local d = safeDec(r) 
+    local s, r = pcall(function() 
+        return httprequest({Url = url, Method = "GET", Headers = {["User-Agent"] = MobileUserAgent}})
+    end)
+    if s and r and r.Body and r.Body:sub(1,1) == "{" then 
+        local d = safeDec(r.Body) 
         if d then return true, d end 
     end
     return false, nil
 end
 
-local ProxyPool = {
-    {url = "https://thumbnails.roblox.com/v1/batch", fails = 0, region = "Direct"},
-    {url = "https://thumbnails.roproxy.com/v1/batch", fails = 0, region = "Global"},
-    {url = "https://corsproxy.io/?https%3A%2F%2Fthumbnails.roblox.com%2Fv1%2Fbatch", fails = 0, region = "EU"},
-    {url = "https://api.allorigins.win/raw?url=https%3A%2F%2Fthumbnails.roblox.com%2Fv1%2Fbatch", fails = 0, region = "US"}
+local OmniscientProxies = {
+    {url = "https://thumbnails.roproxy.com/v1/batch", fails = 0},
+    {url = "https://corsproxy.io/?https%3A%2F%2Fthumbnails.roblox.com%2Fv1%2Fbatch", fails = 0},
+    {url = "https://api.allorigins.win/raw?url=https%3A%2F%2Fthumbnails.roblox.com%2Fv1%2Fbatch", fails = 0},
+    {url = "https://thumbnails.roblox.com/v1/batch", fails = 0}
 }
 
 local function getBestProxy()
-    table.sort(ProxyPool, function(a, b) return a.fails < b.fails end)
-    return ProxyPool[1]
+    table.sort(OmniscientProxies, function(a, b) return a.fails < b.fails end)
+    return OmniscientProxies[1]
 end
 
 local function fTDC(tk)
     local aT = {}
+    local types = {"AvatarHeadShot", "AvatarBust", "Avatar"}
     for i = 1, #tk, 100 do
         local c = {unpack(tk, i, math.min(i + 99, #tk))}
-        local success = false
-        local retryCount = 0
-        
-        while not success and retryCount < #ProxyPool do
+        for _, reqType in ipairs(types) do
             local bestProxy = getBestProxy()
-            local apiUrl = bestProxy.url
-            local p = { Url = apiUrl, Headers = { ["Content-Type"] = "application/json" }, Method = "POST", Body = {} }
-            for _, t in ipairs(c) do table.insert(p.Body, {requestId = "0:"..t..":AvatarHeadshot:150x150:png:regular", type = "AvatarHeadShot", targetId = 0, token = t, format = "png", size = "150x150"}) end
-            
+            local p = {Url = bestProxy.url, Headers = {["Content-Type"] = "application/json", ["User-Agent"] = MobileUserAgent}, Method = "POST", Body = {}}
+            for _, t in ipairs(c) do table.insert(p.Body, {requestId = "0:"..t..":"..reqType..":150x150:png:regular", type = reqType, targetId = 0, token = t, format = "png", size = "150x150"}) end
             local sE, eB = pcall(function() return HttpService:JSONEncode(p.Body) end)
             if sE then
                 p.Body = eB
                 local s, r = pcall(function() return httprequest(p) end)
-                if s and r and (r.StatusCode == 200 or r.Success) then
+                if s and r and (r.StatusCode == 200 or r.Success) and r.Body then
                     bestProxy.fails = 0
-                    local d = safeDec(r.Body) 
+                    local d = safeDec(r.Body)
                     if d and d.data then for _, v in ipairs(d.data) do table.insert(aT, v) end end
-                    success = true
                 else
                     bestProxy.fails = bestProxy.fails + 1
-                    retryCount = retryCount + 1
-                    task.wait(0.2)
+                    task.wait(0.1)
                 end
-            else
-                break
             end
         end
     end
@@ -704,6 +769,15 @@ local function syID(id)
 end
 pBx.FocusLost:Connect(function() syID(pBx.Text) end)
 bpBx.FocusLost:Connect(function() syID(bpBx.Text) end)
+
+local function getUniverseId(placeId)
+    local s, r = pcall(function() return game:HttpGet("https://apis.roblox.com/universes/v1/places/"..tostring(placeId).."/universe") end)
+    if s and r and r:sub(1,1) == "{" then
+        local d = safeDec(r)
+        if d and d.universeId then return d.universeId end
+    end
+    return nil
+end
 
 gSBtn.MouseButton1Click:Connect(function()
     local q = gBx.Text
@@ -722,24 +796,43 @@ gSBtn.MouseButton1Click:Connect(function()
                     local iM = Instance.new("Frame", scG)
                     iM.Size = UDim2.new(1, 0, 0, 64)
                     iM.BackgroundColor3 = Theme.Item
+                    iM.ZIndex = 12
                     rC(iM, 8) rS(iM, Theme.Border, 1.5)
                     
                     local dt = Instance.new("Frame", iM)
                     dt.Size = UDim2.new(0, 4, 0.5, 0)
                     dt.Position = UDim2.new(0, 0, 0.25, 0)
                     dt.BackgroundColor3 = Theme.Primary
+                    dt.ZIndex = 13
                     rC(dt, 2)
                     
-                    local nT = string.sub(g.name, 1, 28) .. (string.len(g.name) > 28 and "..." or "")
+                    local gIc = Instance.new("ImageLabel", iM)
+                    gIc.Size = UDim2.new(0, 44, 0, 44)
+                    gIc.Position = UDim2.new(0, 15, 0.5, -22)
+                    gIc.BackgroundColor3 = Theme.BG
+                    gIc.BorderSizePixel = 0
+                    gIc.ZIndex = 13
+                    rC(gIc, 8)
+                    
+                    gIc.Image = "rbxasset://textures/ui/GuiImagePlaceholder.png"
+                    task.spawn(function()
+                        local uniId = getUniverseId(g.placeId)
+                        if uniId then
+                            gIc.Image = "rbxthumb://type=GameIcon&id=" .. tostring(uniId) .. "&w=150&h=150"
+                        end
+                    end)
+                    
+                    local nT = string.sub(g.name, 1, 25) .. (string.len(g.name) > 25 and "..." or "")
                     local cName = g.creatorName or "Unknown"
                     local inf = Instance.new("TextLabel", iM)
-                    inf.Size = UDim2.new(1, -110, 1, 0)
-                    inf.Position = UDim2.new(0, 15, 0, 0)
+                    inf.Size = UDim2.new(1, -165, 1, 0)
+                    inf.Position = UDim2.new(0, 70, 0, 0)
                     inf.BackgroundTransparency = 1
                     inf.TextXAlignment = Enum.TextXAlignment.Left
                     inf.TextColor3 = Theme.Text
                     inf.Font = Enum.Font.Code
                     inf.TextSize = 13
+                    inf.ZIndex = 13
                     inf.Text = string.format("%s\n<font color='#%s' size='11'>ID: %s | BY: %s</font>\n<font color='#%s' size='11'>PLAYERS: %d</font>", nT, Theme.SubText:ToHex(), tostring(g.placeId), cName, Theme.Primary:ToHex(), g.playerCount or 0)
                     inf.RichText = true
                     
@@ -751,6 +844,7 @@ gSBtn.MouseButton1Click:Connect(function()
                     cb.Font = Enum.Font.Code
                     cb.TextSize = 10
                     cb.Text = "COPY"
+                    cb.ZIndex = 13
                     rC(cb, 6) rS(cb, Theme.Primary, 1) aP(cb) aH(cb, Color3.fromRGB(0, 40, 20))
                     cb.MouseButton1Click:Connect(function() set_clipboard(tostring(g.placeId)) cb.Text = "OK" task.wait(1) cb.Text = "COPY" end)
 
@@ -762,14 +856,15 @@ gSBtn.MouseButton1Click:Connect(function()
                     sb.Font = Enum.Font.GothamBlack
                     sb.TextSize = 10
                     sb.Text = "SET"
+                    sb.ZIndex = 13
                     rC(sb, 6) aP(sb)
                     sb.MouseButton1Click:Connect(function() syID(g.placeId) sb.Text = "SET!" task.wait(1) sb.Text = "SET" end)
                 end
             else
-                local em = Instance.new("TextLabel", scG) em.Size = UDim2.new(1, 0, 0, 50) em.BackgroundTransparency = 1 em.TextColor3 = Theme.SubText em.Font = Enum.Font.Code em.TextSize = 13 em.Text = "NULL"
+                local em = Instance.new("TextLabel", scG) em.Size = UDim2.new(1, 0, 0, 50) em.BackgroundTransparency = 1 em.TextColor3 = Theme.SubText em.Font = Enum.Font.Code em.TextSize = 13 em.Text = "NULL" em.ZIndex = 13
             end
         else
-            local em = Instance.new("TextLabel", scG) em.Size = UDim2.new(1, 0, 0, 50) em.BackgroundTransparency = 1 em.TextColor3 = Theme.Danger em.Font = Enum.Font.Code em.TextSize = 13 em.Text = "MAP_NOT_FOUND_OR_BLOCKED"
+            local em = Instance.new("TextLabel", scG) em.Size = UDim2.new(1, 0, 0, 50) em.BackgroundTransparency = 1 em.TextColor3 = Theme.Danger em.Font = Enum.Font.Code em.TextSize = 13 em.Text = "MAP_NOT_FOUND" em.ZIndex = 13
         end
         gSBtn.Text = "GO"
     end)
@@ -802,8 +897,10 @@ eBtn.MouseButton1Click:Connect(function()
     local s, uid = pcall(function() return tonumber(u) or Players:GetUserIdFromNameAsync(u) end)
     if not s or not uid then sS = false eBtn.Text = "EXECUTE" aL("Invalid UID.", Theme.Danger) return end
     aImg.Image = "rbxthumb://type=AvatarHeadShot&id=" .. uid .. "&w=150&h=150"
-    local th = getCachedAvatar(uid)
-    if th == "" then sS = false eBtn.Text = "EXECUTE" aL("API Blocked.", Theme.Danger) return end
+    
+    local gotAvatars = getTargetAvatars(uid)
+    if not gotAvatars then sS = false eBtn.Text = "EXECUTE" aL("API Blocked.", Theme.Danger) return end
+    
     aL("Locked UID: " .. uid, Theme.Primary)
     local pId = gID
     local mS = tonumber(sBx.Text) if not mS or mS <= 0 then mS = 9999 end
@@ -819,6 +916,10 @@ eBtn.MouseButton1Click:Connect(function()
                 for idx, sv in ipairs(svs) do
                     if not sS then break end
                     
+                    if sv.playing and sv.maxPlayers and sv.playing >= sv.maxPlayers then
+                        continue
+                    end
+                    
                     while activeThreads >= currentMaxThreads do RunService.Heartbeat:Wait() end
                     
                     activeThreads = activeThreads + 1
@@ -831,7 +932,7 @@ eBtn.MouseButton1Click:Connect(function()
                                 if sth and ths then 
                                     pC = pC + #ths 
                                     for _, pt in ipairs(ths) do 
-                                        if pt.imageUrl and pt.imageUrl == th then 
+                                        if pt.imageUrl and (pt.imageUrl == AvatarCache.Head or pt.imageUrl == AvatarCache.Bust or pt.imageUrl == AvatarCache.Full) then 
                                             sS = false 
                                             aL("NODE FOUND! HYPERLINKING...", Theme.Primary)
                                             playAlertSound()
@@ -851,10 +952,10 @@ eBtn.MouseButton1Click:Connect(function()
                 end
                 if not cr then break end
             else 
-                aL("Rate Limit... สลับ API ชั่วคราว", Theme.Danger) 
-                task.wait(5) 
+                aL("Rate Limit... Rotating", Theme.Danger) 
+                task.wait(3) 
             end
-            task.wait(1)
+            task.wait(0.5)
             
             local avgFPS = getAverageFPS()
             if avgFPS > 45 and currentMaxThreads < 15 then
@@ -879,13 +980,14 @@ local function rBP(pg)
     for _, c in ipairs(scB:GetChildren()) do if c:IsA("Frame") then c:Destroy() end end
     local tS = #fSv local mP = math.max(1, math.ceil(tS / 10)) if pg > mP then pg = mP end if pg < 1 then pg = 1 end cPge = pg
     pLb.Text = string.format("PAGE %d / %d", cPge, mP)
-    if tS == 0 then local em = Instance.new("TextLabel", scB) em.Size = UDim2.new(1, 0, 0, 50) em.BackgroundTransparency = 1 em.TextColor3 = Theme.SubText em.Font = Enum.Font.Code em.TextSize = 13 em.Text = "NULL" return end
+    if tS == 0 then local em = Instance.new("TextLabel", scB) em.Size = UDim2.new(1, 0, 0, 50) em.BackgroundTransparency = 1 em.TextColor3 = Theme.SubText em.Font = Enum.Font.Code em.TextSize = 13 em.Text = "NULL" em.ZIndex = 13 return end
     local sI = (pg - 1) * 10 + 1 local eI = math.min(sI + 9, tS) local pId = gID
     for i = sI, eI do
         local sv = fSv[i]
         local iM = Instance.new("Frame", scB)
         iM.Size = UDim2.new(1, 0, 0, 58)
         iM.BackgroundColor3 = Theme.Item
+        iM.ZIndex = 12
         rC(iM, 8) rS(iM, Theme.Border, 1.5)
         
         local pV = sv.ping or 999
@@ -897,6 +999,7 @@ local function rBP(pg)
         inf.TextColor3 = Theme.Text
         inf.Font = Enum.Font.Code
         inf.TextSize = 13
+        inf.ZIndex = 13
         inf.Text = string.format("NODE_%s\n<font color='#%s' size='11'>USR: %d/%d | PING: <font color='#%s'>%dms</font></font>", string.sub(sv.id, 1, 6), Theme.SubText:ToHex(), sv.playing or 0, sv.maxPlayers or 0, gPC(pV):ToHex(), pV)
         inf.RichText = true
         
@@ -904,6 +1007,7 @@ local function rBP(pg)
         dt.Size = UDim2.new(0, 4, 0.5, 0)
         dt.Position = UDim2.new(0, 0, 0.25, 0)
         dt.BackgroundColor3 = gPC(pV)
+        dt.ZIndex = 13
         rC(dt, 2)
         
         local cb = Instance.new("TextButton", iM)
@@ -914,6 +1018,7 @@ local function rBP(pg)
         cb.Font = Enum.Font.Code
         cb.TextSize = 10
         cb.Text = "COPY"
+        cb.ZIndex = 13
         rC(cb, 6) rS(cb, Theme.Primary, 1) aP(cb) aH(cb, Color3.fromRGB(0, 40, 20))
         cb.MouseButton1Click:Connect(function() set_clipboard(tostring(sv.id)) cb.Text = "OK" task.wait(1) cb.Text = "COPY" end)
 
@@ -925,6 +1030,7 @@ local function rBP(pg)
         jb.Font = Enum.Font.GothamBlack
         jb.TextSize = 10
         jb.Text = "JOIN"
+        jb.ZIndex = 13
         rC(jb, 6) aP(jb)
         jb.MouseButton1Click:Connect(function() TeleportService:TeleportToPlaceInstance(pId, sv.id, Players.LocalPlayer) end)
     end
@@ -935,8 +1041,8 @@ local function aFi()
     for _, s in ipairs(aSv) do
         local p = s.playing or 0 local m = math.max(s.maxPlayers or 1, 1) local pg = s.ping or 999 local r = p / m
         if cF == "All" then table.insert(fSv, s)
-        elseif cF == "Low Ping" then if pg <= 80 then table.insert(fSv, s) end
-        elseif cF == "Small" then if r < 0.3 then table.insert(fSv, s) end
+        elseif cF == "Low Ping" then if pg <= 150 then table.insert(fSv, s) end
+        elseif cF == "Small" then table.insert(fSv, s)
         elseif cF == "Large" then if p < m and p > 0 then table.insert(fSv, s) end end
     end
     if cF == "Low Ping" then table.sort(fSv, function(a,b) return (a.ping or 999) < (b.ping or 999) end)
@@ -958,9 +1064,9 @@ local function tLS()
     aSv = {} fSv = {}
     for _, c in ipairs(scB:GetChildren()) do if c:IsA("Frame") or c:IsA("TextLabel") then c:Destroy() end end
     local pId = gID
-    pLb.Text = "Loading..."
+    pLb.Text = "HACKING..."
     task.spawn(function()
-        local sn = {} local function fPD(s, m) local c, p = "", 0 repeat local cacheBuster = "&_t=" .. tostring(tick()) local u = "https://games.roblox.com/v1/games/" .. pId .. "/servers/Public?sortOrder=" .. s .. "&limit=100" .. (c ~= "" and "&cursor=" .. c or "") .. cacheBuster local ok, r = pcall(function() return game:HttpGet(u) end) if ok and r and r:sub(1,1) == "{" then local d = safeDec(r) if d and d.data then for _, sv in ipairs(d.data) do if not sn[sv.id] then sn[sv.id] = true table.insert(aSv, sv) end end c = d.nextPageCursor or "" else break end else break end p = p + 1 until c == "" or p >= m end
+        local sn = {} local function fPD(s, m) local c, p = "", 0 repeat local cacheBuster = "&_t=" .. tostring(tick()) local u = "https://games.roblox.com/v1/games/" .. pId .. "/servers/Public?sortOrder=" .. s .. "&limit=100" .. (c ~= "" and "&cursor=" .. c or "") .. cacheBuster local ok, r = pcall(function() return httprequest({Url = u, Method = "GET", Headers = {["User-Agent"] = MobileUserAgent}}) end) if ok and r and r.Body and r.Body:sub(1,1) == "{" then local d = safeDec(r.Body) if d and d.data then for _, sv in ipairs(d.data) do if not sn[sv.id] then sn[sv.id] = true table.insert(aSv, sv) end end c = d.nextPageCursor or "" else break end else break end p = p + 1 until c == "" or p >= m end
         fPD("Desc", 3) fPD("Asc", 3) aFi()
     end)
 end
@@ -977,7 +1083,7 @@ ffBtn.MouseButton1Click:Connect(function()
     task.spawn(function()
         local s, uid = pcall(function() return tonumber(ts) or Players:GetUserIdFromNameAsync(ts) end)
         if not s or not uid then bSr = false ffBtn.Text = "FIND" pLb.Text = "ERR: UID" return end
-        local th = getCachedAvatar(uid) if th == "" then bSr = false ffBtn.Text = "FIND" pLb.Text = "ERR: API" return end
+        local gotAvatars = getTargetAvatars(uid) if not gotAvatars then bSr = false ffBtn.Text = "FIND" pLb.Text = "ERR: API" return end
         local pId = gID local cr = "" local fS = nil
         
         local activeThreads = 0
@@ -990,6 +1096,10 @@ ffBtn.MouseButton1Click:Connect(function()
                 for idx, sv in ipairs(svs) do
                     if not bSr then break end
                     
+                    if sv.playing and sv.maxPlayers and sv.playing >= sv.maxPlayers then
+                        continue
+                    end
+                    
                     while activeThreads >= currentMaxThreads do RunService.Heartbeat:Wait() end
                     
                     activeThreads = activeThreads + 1
@@ -998,7 +1108,7 @@ ffBtn.MouseButton1Click:Connect(function()
                             local sth, ths = fTDC(sv.playerTokens) 
                             if sth and ths then 
                                 for _, pt in ipairs(ths) do 
-                                    if pt.imageUrl and pt.imageUrl == th then 
+                                    if pt.imageUrl and (pt.imageUrl == AvatarCache.Head or pt.imageUrl == AvatarCache.Bust or pt.imageUrl == AvatarCache.Full) then 
                                         fS = sv 
                                         bSr = false 
                                         playAlertSound()
@@ -1015,9 +1125,9 @@ ffBtn.MouseButton1Click:Connect(function()
                 end
                 if fS or not cr then break end
             else 
-                task.wait(5) 
+                task.wait(3) 
             end
-            task.wait(1)
+            task.wait(0.5)
             
             local avgFPS = getAverageFPS()
             if avgFPS > 45 and currentMaxThreads < 15 then
@@ -1044,3 +1154,172 @@ ffBtn.MouseButton1Click:Connect(function()
 end)
 
 tLS()
+
+local VirtualUser = game:GetService("VirtualUser")
+Players.LocalPlayer.Idled:Connect(function()
+    VirtualUser:Button2Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+    task.wait(1)
+    VirtualUser:Button2Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+end)
+
+game:GetService("GuiService").ErrorMessageChanged:Connect(function()
+    task.wait(2)
+    pcall(function()
+        TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, Players.LocalPlayer)
+    end)
+end)
+
+local hG = Instance.new("Frame", screenGui)
+hG.Size = UDim2.new(0, 380, 0, 320)
+hG.Position = UDim2.new(0.5, -190, 0.5, -160)
+hG.BackgroundColor3 = Theme.Panel
+hG.Visible = false
+hG.ZIndex = 50
+rC(hG, 12)
+rS(hG, Theme.Danger, 2)
+
+local hDt, hDs, hSp = false, nil, nil
+hG.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then hDt = true hDs = i.Position hSp = hG.Position end end)
+UserInputService.InputChanged:Connect(function(i) if hDt and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then local d = i.Position - hDs hG.Position = UDim2.new(hSp.X.Scale, hSp.X.Offset + d.X, hSp.Y.Scale, hSp.Y.Offset + d.Y) end end)
+UserInputService.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then hDt = false end end)
+
+local hTitle = Instance.new("TextLabel", hG)
+hTitle.Size = UDim2.new(1, -40, 0, 40)
+hTitle.Position = UDim2.new(0, 15, 0, 0)
+hTitle.BackgroundTransparency = 1
+hTitle.Text = "HUNTER TRACKER"
+hTitle.TextColor3 = Theme.Danger
+hTitle.Font = Enum.Font.GothamBlack
+hTitle.TextSize = 16
+hTitle.TextXAlignment = Enum.TextXAlignment.Left
+hTitle.ZIndex = 51
+
+local hClose = Instance.new("TextButton", hG)
+hClose.Size = UDim2.new(0, 30, 0, 30)
+hClose.Position = UDim2.new(1, -40, 0, 5)
+hClose.BackgroundColor3 = Theme.Danger
+hClose.Text = "X"
+hClose.TextColor3 = Theme.BG
+hClose.Font = Enum.Font.GothamBlack
+hClose.ZIndex = 51
+rC(hClose, 6)
+hClose.MouseButton1Click:Connect(function() hG.Visible = false end)
+
+local hScroll = Instance.new("ScrollingFrame", hG)
+hScroll.Size = UDim2.new(1, -20, 1, -55)
+hScroll.Position = UDim2.new(0, 10, 0, 45)
+hScroll.BackgroundColor3 = Theme.BG
+hScroll.BackgroundTransparency = 0.5
+hScroll.ScrollBarThickness = 3
+hScroll.ScrollBarImageColor3 = Theme.Danger
+hScroll.ZIndex = 51
+rC(hScroll, 8)
+local hLay = Instance.new("UIListLayout", hScroll)
+hLay.Padding = UDim.new(0, 5)
+local hPad = Instance.new("UIPadding", hScroll)
+hPad.PaddingTop = UDim.new(0, 5) hPad.PaddingLeft = UDim.new(0, 5) hPad.PaddingBottom = UDim.new(0, 5)
+
+local function tpToPlayer(p)
+    local lpC = Players.LocalPlayer.Character
+    if lpC and lpC:FindFirstChild("HumanoidRootPart") and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+        lpC.HumanoidRootPart.CFrame = p.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3)
+    end
+end
+
+local function applyESP(p)
+    if not p.Character then return end
+    if p.Character:FindFirstChild("JAO_ESP") then 
+        p.Character.JAO_ESP:Destroy() 
+    else
+        local hl = Instance.new("Highlight")
+        hl.Name = "JAO_ESP"
+        hl.FillColor = Theme.Danger
+        hl.OutlineColor = Theme.Danger
+        hl.FillTransparency = 0.6
+        hl.OutlineTransparency = 0.1
+        hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+        hl.Parent = p.Character
+    end
+end
+
+local function toggleSpectate(p)
+    if workspace.CurrentCamera.CameraSubject == p.Character.Humanoid then
+        workspace.CurrentCamera.CameraSubject = Players.LocalPlayer.Character.Humanoid
+    else
+        workspace.CurrentCamera.CameraSubject = p.Character.Humanoid
+    end
+end
+
+local function loadPlayers()
+    for _, c in ipairs(hScroll:GetChildren()) do if c:IsA("Frame") then c:Destroy() end end
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p == Players.LocalPlayer then continue end
+        
+        local pf = Instance.new("Frame", hScroll)
+        pf.Size = UDim2.new(1, -10, 0, 40)
+        pf.BackgroundColor3 = Theme.Item
+        pf.ZIndex = 52
+        rC(pf, 6) rS(pf, Theme.Border, 1)
+
+        local pImg = Instance.new("ImageLabel", pf)
+        pImg.Size = UDim2.new(0, 30, 0, 30)
+        pImg.Position = UDim2.new(0, 5, 0.5, -15)
+        pImg.BackgroundColor3 = Theme.BG
+        pImg.Image = "rbxthumb://type=AvatarHeadShot&id="..p.UserId.."&w=150&h=150"
+        pImg.ZIndex = 53
+        rC(pImg, 15)
+
+        local pName = Instance.new("TextLabel", pf)
+        pName.Size = UDim2.new(0.4, 0, 1, 0)
+        pName.Position = UDim2.new(0, 42, 0, 0)
+        pName.BackgroundTransparency = 1
+        pName.Text = p.DisplayName
+        pName.TextColor3 = Theme.Text
+        pName.Font = Enum.Font.GothamBold
+        pName.TextSize = 12
+        pName.TextXAlignment = Enum.TextXAlignment.Left
+        pName.ZIndex = 53
+
+        local bTP = Instance.new("TextButton", pf)
+        bTP.Size = UDim2.new(0, 35, 0, 26)
+        bTP.Position = UDim2.new(1, -130, 0.5, -13)
+        bTP.BackgroundColor3 = Theme.Primary
+        bTP.Text = "TP"
+        bTP.TextColor3 = Theme.BG
+        bTP.Font = Enum.Font.GothamBlack
+        bTP.TextSize = 10
+        bTP.ZIndex = 53
+        rC(bTP, 4) aP(bTP)
+        bTP.MouseButton1Click:Connect(function() tpToPlayer(p) end)
+
+        local bESP = Instance.new("TextButton", pf)
+        bESP.Size = UDim2.new(0, 35, 0, 26)
+        bESP.Position = UDim2.new(1, -88, 0.5, -13)
+        bESP.BackgroundColor3 = Theme.Danger
+        bESP.Text = "ESP"
+        bESP.TextColor3 = Theme.BG
+        bESP.Font = Enum.Font.GothamBlack
+        bESP.TextSize = 10
+        bESP.ZIndex = 53
+        rC(bESP, 4) aP(bESP)
+        bESP.MouseButton1Click:Connect(function() applyESP(p) end)
+
+        local bVW = Instance.new("TextButton", pf)
+        bVW.Size = UDim2.new(0, 40, 0, 26)
+        bVW.Position = UDim2.new(1, -48, 0.5, -13)
+        bVW.BackgroundColor3 = Theme.BG
+        bVW.Text = "VIEW"
+        bVW.TextColor3 = Theme.Primary
+        bVW.Font = Enum.Font.GothamBlack
+        bVW.TextSize = 10
+        bVW.ZIndex = 53
+        rC(bVW, 4) rS(bVW, Theme.Primary, 1.5) aP(bVW)
+        bVW.MouseButton1Click:Connect(function() toggleSpectate(p) end)
+    end
+    hScroll.CanvasSize = UDim2.new(0, 0, 0, hLay.AbsoluteContentSize.Y + 10)
+end
+
+hBtn.MouseButton1Click:Connect(function()
+    hG.Visible = not hG.Visible
+    if hG.Visible then loadPlayers() end
+end)
