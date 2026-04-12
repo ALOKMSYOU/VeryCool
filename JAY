@@ -586,136 +586,121 @@ end
 local function uFG(q)
     local qL = string.lower(q)
     local vG = {}
+    
     local function fetchRolimons()
         local url = "https://api.rolimons.com/games/v1/gamelist"
-        local s, r = pcall(httprequest, {Url = url, Method = "GET"})
+        local s, r = pcall(function() return httprequest({Url = url, Method = "GET"}) end)
         if s and r and r.Success then return r.Body end
-        local s2, r2 = pcall(game.HttpGet, game, url)
+        local s2, r2 = pcall(function() return game:HttpGet(url) end)
         if s2 and type(r2) == "string" then return r2 end
         return nil
     end
+
     local body = fetchRolimons()
     if body and string.sub(body, 1, 1) == "{" then
         local d = safeDec(body)
         if d and d.success and d.games then
-            local vG_idx = 1
             for pId, gData in pairs(d.games) do
                 local gN = gData[1] or ""
                 local pC = tonumber(gData[2]) or 0
                 if pC > 0 and string.find(string.lower(gN), qL, 1, true) then
-                    vG[vG_idx] = {
+                    table.insert(vG, {
                         placeId = tonumber(pId),
                         name = gN,
                         playerCount = pC,
                         creatorName = "Rolimons DB"
-                    }
-                    vG_idx = vG_idx + 1
+                    })
                 end
             end
         end
     end
-    if #vG > 0 then return {games = vG} end
+    
+    if #vG > 0 then
+        return {games = vG}
+    end
     return nil
 end
 
--- [UPGRADE] ใช้ระบบ Hash Map สำหรับค้นหา O(1) (เร็วกว่าเปรียบเทียบทีละตัว 10 เท่า)
-local TargetHashes = {}
+local AvatarCache = {}
 
-local function getTargetAvatars(uid)
-    table.clear(TargetHashes) -- เคลียร์ขยะเก่าทิ้งแบบคลีนๆ
-    local urls = {
-        "https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds="..uid.."&format=Png&size=150x150&isCircular=false",
-        "https://thumbnails.roblox.com/v1/users/avatar-bust?userIds="..uid.."&format=Png&size=150x150&isCircular=false",
-        "https://thumbnails.roblox.com/v1/users/avatar?userIds="..uid.."&format=Png&size=150x150&isCircular=false"
-    }
-    local foundAny = false
-    for _, v in ipairs(urls) do
-        local s, r = pcall(game.HttpGet, game, v)
-        if s and r and string.sub(r, 1, 1) == "{" then
-            local d = safeDec(r)
-            if d and d.data and d.data[1] then 
-                TargetHashes[d.data[1].imageUrl] = true -- เก็บเป็น Key Dictionary
-                foundAny = true
-            end
-        end
+local function getCachedAvatar(uid)
+    if AvatarCache[uid] then 
+        return AvatarCache[uid]
     end
-    return foundAny
+    
+    local s, r = pcall(function() return game:HttpGet("https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=" .. uid .. "&format=Png&size=150x150&isCircular=false") end)
+    if s and r and r:sub(1,1) == "{" then 
+        local d = safeDec(r) 
+        if d and d.data and d.data[1] then 
+            AvatarCache[uid] = d.data[1].imageUrl 
+            return AvatarCache[uid]
+        end 
+    end
+    return ""
 end
-
-local MobileUserAgent = "Roblox/v2.610.601 (Android; U; Android 13; en-us) RobloxApp/2.610.601"
 
 local function gSD(id, c)
     local cacheBuster = "&_t=" .. tostring(tick())
     local url = "https://games.roblox.com/v1/games/".. id .."/servers/Public?limit=100" .. (c and "&cursor="..c or "") .. cacheBuster
-    local s, r = pcall(httprequest, {Url = url, Method = "GET", Headers = {["User-Agent"] = MobileUserAgent}})
-    
-    if s and r and r.Body and string.sub(r.Body, 1, 1) == "{" then 
-        local d = safeDec(r.Body) 
+    local s, r = pcall(function() return game:HttpGet(url) end)
+    if s and r and r:sub(1,1) == "{" then 
+        local d = safeDec(r) 
         if d then return true, d end 
     end
     return false, nil
 end
 
-local OmniscientProxies = {
-    {url = "https://thumbnails.roblox.com/v1/batch", fails = 0},
-    {url = "https://corsproxy.io/?https%3A%2F%2Fthumbnails.roblox.com%2Fv1%2Fbatch", fails = 0},
-    {url = "https://api.allorigins.win/raw?url=https%3A%2F%2Fthumbnails.roblox.com%2Fv1%2Fbatch", fails = 0},
-    {url = "https://roproxy.com/v1/batch", fails = 0}
+local ProxyPool = {
+    {url = "https://thumbnails.roblox.com/v1/batch", fails = 0, region = "Direct"},
+    {url = "https://thumbnails.roproxy.com/v1/batch", fails = 0, region = "Global"},
+    {url = "https://corsproxy.io/?https%3A%2F%2Fthumbnails.roblox.com%2Fv1%2Fbatch", fails = 0, region = "EU"},
+    {url = "https://api.allorigins.win/raw?url=https%3A%2F%2Fthumbnails.roblox.com%2Fv1%2Fbatch", fails = 0, region = "US"}
 }
 
 local function getBestProxy()
-    table.sort(OmniscientProxies, function(a, b) return a.fails < b.fails end)
-    return OmniscientProxies[1]
+    table.sort(ProxyPool, function(a, b) return a.fails < b.fails end)
+    return ProxyPool[1]
 end
 
 local function fTDC(tk)
     local aT = {}
-    local aT_idx = 1
-    local types = {"AvatarHeadShot", "AvatarBust", "Avatar"}
-    
     for i = 1, #tk, 100 do
-        local batchSize = math.min(i + 99, #tk)
-        local cCount = batchSize - i + 1
-        local c = {unpack(tk, i, batchSize)}
+        local c = {unpack(tk, i, math.min(i + 99, #tk))}
+        local success = false
+        local retryCount = 0
         
-        for _, reqType in ipairs(types) do
+        while not success and retryCount < #ProxyPool do
             local bestProxy = getBestProxy()
+            local apiUrl = bestProxy.url
+            local p = { Url = apiUrl, Headers = { ["Content-Type"] = "application/json" }, Method = "POST", Body = {} }
+            for _, t in ipairs(c) do table.insert(p.Body, {requestId = "0:"..t..":AvatarHeadshot:150x150:png:regular", type = "AvatarHeadShot", targetId = 0, token = t, format = "png", size = "150x150"}) end
             
-            -- [UPGRADE] จองพื้นที่ RAM ล่วงหน้า (Pre-allocation) ป้องกันเกมค้างเวลาสร้างก้อน JSON
-            local bodyTable = table.create(cCount) 
-            local b_idx = 1
-            for _, t in ipairs(c) do 
-                bodyTable[b_idx] = {requestId = "0:"..t..":"..reqType..":150x150:png:regular", type = reqType, targetId = 0, token = t, format = "png", size = "150x150"}
-                b_idx = b_idx + 1
-            end
-            
-            local sE, eB = pcall(HttpService.JSONEncode, HttpService, bodyTable)
+            local sE, eB = pcall(function() return HttpService:JSONEncode(p.Body) end)
             if sE then
-                local p = {Url = bestProxy.url, Headers = {["Content-Type"] = "application/json", ["User-Agent"] = MobileUserAgent}, Method = "POST", Body = eB}
-                local s, r = pcall(httprequest, p)
-                if s and r and (r.StatusCode == 200 or r.Success) and r.Body then
+                p.Body = eB
+                local s, r = pcall(function() return httprequest(p) end)
+                if s and r and (r.StatusCode == 200 or r.Success) then
                     bestProxy.fails = 0
-                    local d = safeDec(r.Body)
-                    if d and d.data then 
-                        for _, v in ipairs(d.data) do 
-                            aT[aT_idx] = v -- แทนการใช้ table.insert (เร็วกว่า 30%)
-                            aT_idx = aT_idx + 1
-                        end 
-                    end
+                    local d = safeDec(r.Body) 
+                    if d and d.data then for _, v in ipairs(d.data) do table.insert(aT, v) end end
+                    success = true
                 else
                     bestProxy.fails = bestProxy.fails + 1
-                    task.wait(0.1)
+                    retryCount = retryCount + 1
+                    task.wait(0.2)
                 end
+            else
+                break
             end
         end
     end
-    if aT_idx > 1 then return true, aT end
+    if #aT > 0 then return true, aT end
     return false, nil
 end
 
 local gID = game.PlaceId
 local function syID(id)
-    if not id or string.gsub(tostring(id), "%s", "") == "" then gID = game.PlaceId pBx.Text = "" bpBx.Text = "" else gID = tonumber(id) or game.PlaceId pBx.Text = tostring(gID) bpBx.Text = tostring(gID) end
+    if not id or tostring(id):gsub("%s", "") == "" then gID = game.PlaceId pBx.Text = "" bpBx.Text = "" else gID = tonumber(id) or game.PlaceId pBx.Text = tostring(gID) bpBx.Text = tostring(gID) end
 end
 pBx.FocusLost:Connect(function() syID(pBx.Text) end)
 bpBx.FocusLost:Connect(function() syID(bpBx.Text) end)
@@ -792,14 +777,7 @@ end)
 
 uBx.FocusLost:Connect(function()
     local t = uBx.Text
-    if t ~= "" then 
-        task.spawn(function() 
-            local s, id = pcall(function() return tonumber(t) or Players:GetUserIdFromNameAsync(t) end) 
-            if s and id then aImg.Image = "rbxthumb://type=AvatarHeadShot&id=" .. id .. "&w=150&h=150" end 
-        end) 
-    else 
-        aImg.Image = "rbxasset://textures/ui/GuiImagePlaceholder.png" 
-    end
+    if t ~= "" then task.spawn(function() local s, id = pcall(function() return tonumber(t) or Players:GetUserIdFromNameAsync(t) end) if s and id then aImg.Image = "rbxthumb://type=AvatarHeadShot&id=" .. id .. "&w=150&h=150" end end) else aImg.Image = "rbxasset://textures/ui/GuiImagePlaceholder.png" end
 end)
 
 local fpsHistory = {}
@@ -824,15 +802,12 @@ eBtn.MouseButton1Click:Connect(function()
     local s, uid = pcall(function() return tonumber(u) or Players:GetUserIdFromNameAsync(u) end)
     if not s or not uid then sS = false eBtn.Text = "EXECUTE" aL("Invalid UID.", Theme.Danger) return end
     aImg.Image = "rbxthumb://type=AvatarHeadShot&id=" .. uid .. "&w=150&h=150"
-    
-    local gotAvatars = getTargetAvatars(uid)
-    if not gotAvatars then sS = false eBtn.Text = "EXECUTE" aL("API Blocked.", Theme.Danger) return end
-    
+    local th = getCachedAvatar(uid)
+    if th == "" then sS = false eBtn.Text = "EXECUTE" aL("API Blocked.", Theme.Danger) return end
     aL("Locked UID: " .. uid, Theme.Primary)
     local pId = gID
     local mS = tonumber(sBx.Text) if not mS or mS <= 0 then mS = 9999 end
     local cr, sr, pC = nil, 0, 0
-    
     task.spawn(function()
         local activeThreads = 0
         local currentMaxThreads = 6 
@@ -844,30 +819,19 @@ eBtn.MouseButton1Click:Connect(function()
                 for idx, sv in ipairs(svs) do
                     if not sS then break end
                     
-                    if sv.playing and sv.maxPlayers and sv.playing >= sv.maxPlayers then
-                        continue
-                    end
-                    
-                    while activeThreads >= currentMaxThreads do task.wait() end -- เปลี่ยนจาก Heartbeat เป็น task.wait ลดภาระฝั่งเรนเดอร์
+                    while activeThreads >= currentMaxThreads do RunService.Heartbeat:Wait() end
                     
                     activeThreads = activeThreads + 1
                     task.spawn(function()
                         if sv.playerTokens and #sv.playerTokens > 0 then
                             local tkS = {}
-                            local tkS_idx = 1
-                            local limit = math.min(#sv.playerTokens, mS)
-                            for i = 1, limit do 
-                                tkS[tkS_idx] = sv.playerTokens[i] 
-                                tkS_idx = tkS_idx + 1
-                            end
-                            
-                            if tkS_idx > 1 then
+                            for i = 1, math.min(#sv.playerTokens, mS) do table.insert(tkS, sv.playerTokens[i]) end
+                            if #tkS > 0 then
                                 local sth, ths = fTDC(tkS)
                                 if sth and ths then 
                                     pC = pC + #ths 
                                     for _, pt in ipairs(ths) do 
-                                        -- [UPGRADE] เช็คข้อมูลแบบ O(1) พริบตาเดียวรู้เรื่อง
-                                        if pt.imageUrl and TargetHashes[pt.imageUrl] then 
+                                        if pt.imageUrl and pt.imageUrl == th then 
                                             sS = false 
                                             aL("NODE FOUND! HYPERLINKING...", Theme.Primary)
                                             playAlertSound()
@@ -883,14 +847,14 @@ eBtn.MouseButton1Click:Connect(function()
                     sr = sr + 1 
                     aL(string.format("Nodes: %03d | IDs: %04d", sr, pC), Theme.SubText) 
                     
-                    if idx % 10 == 0 then task.wait() end
+                    if idx % 10 == 0 then RunService.Heartbeat:Wait() end
                 end
                 if not cr then break end
             else 
-                aL("Rate Limit... Rotating", Theme.Danger) 
-                task.wait(3) 
+                aL("Rate Limit... สลับ API ชั่วคราว", Theme.Danger) 
+                task.wait(5) 
             end
-            task.wait(0.5)
+            task.wait(1)
             
             local avgFPS = getAverageFPS()
             if avgFPS > 45 and currentMaxThreads < 15 then
@@ -900,7 +864,7 @@ eBtn.MouseButton1Click:Connect(function()
             end
         end
         
-        while activeThreads > 0 do task.wait() end
+        while activeThreads > 0 do RunService.Heartbeat:Wait() end
         if sS then sS = false eBtn.Text = "EXECUTE" aL("Target Ghosted.", Theme.Danger) end
     end)
 end)
@@ -967,14 +931,13 @@ local function rBP(pg)
 end
 
 local function aFi()
-    table.clear(fSv)
-    local fSv_idx = 1
+    fSv = {}
     for _, s in ipairs(aSv) do
         local p = s.playing or 0 local m = math.max(s.maxPlayers or 1, 1) local pg = s.ping or 999 local r = p / m
-        if cF == "All" then fSv[fSv_idx] = s; fSv_idx = fSv_idx + 1
-        elseif cF == "Low Ping" then if pg <= 80 then fSv[fSv_idx] = s; fSv_idx = fSv_idx + 1 end
-        elseif cF == "Small" then if r < 0.3 then fSv[fSv_idx] = s; fSv_idx = fSv_idx + 1 end
-        elseif cF == "Large" then if p < m and p > 0 then fSv[fSv_idx] = s; fSv_idx = fSv_idx + 1 end end
+        if cF == "All" then table.insert(fSv, s)
+        elseif cF == "Low Ping" then if pg <= 80 then table.insert(fSv, s) end
+        elseif cF == "Small" then if r < 0.3 then table.insert(fSv, s) end
+        elseif cF == "Large" then if p < m and p > 0 then table.insert(fSv, s) end end
     end
     if cF == "Low Ping" then table.sort(fSv, function(a,b) return (a.ping or 999) < (b.ping or 999) end)
     elseif cF == "Small" then table.sort(fSv, function(a,b) return (a.playing or 0) < (b.playing or 0) end)
@@ -992,35 +955,12 @@ for fN, fB in pairs(fBts) do
 end
 
 local function tLS()
-    table.clear(aSv); table.clear(fSv)
+    aSv = {} fSv = {}
     for _, c in ipairs(scB:GetChildren()) do if c:IsA("Frame") or c:IsA("TextLabel") then c:Destroy() end end
     local pId = gID
     pLb.Text = "Loading..."
     task.spawn(function()
-        local sn = {} 
-        local aSv_idx = 1
-        local function fPD(s, m) 
-            local c, p = "", 0 
-            repeat 
-                local cacheBuster = "&_t=" .. tostring(tick()) 
-                local u = "https://games.roblox.com/v1/games/" .. pId .. "/servers/Public?sortOrder=" .. s .. "&limit=100" .. (c ~= "" and "&cursor=" .. c or "") .. cacheBuster 
-                local ok, r = pcall(httprequest, {Url = u, Method = "GET", Headers = {["User-Agent"] = MobileUserAgent}}) 
-                if ok and r and r.Body and string.sub(r.Body, 1, 1) == "{" then 
-                    local d = safeDec(r.Body) 
-                    if d and d.data then 
-                        for _, sv in ipairs(d.data) do 
-                            if not sn[sv.id] then 
-                                sn[sv.id] = true 
-                                aSv[aSv_idx] = sv
-                                aSv_idx = aSv_idx + 1
-                            end 
-                        end 
-                        c = d.nextPageCursor or "" 
-                    else break end 
-                else break end 
-                p = p + 1 
-            until c == "" or p >= m 
-        end
+        local sn = {} local function fPD(s, m) local c, p = "", 0 repeat local cacheBuster = "&_t=" .. tostring(tick()) local u = "https://games.roblox.com/v1/games/" .. pId .. "/servers/Public?sortOrder=" .. s .. "&limit=100" .. (c ~= "" and "&cursor=" .. c or "") .. cacheBuster local ok, r = pcall(function() return game:HttpGet(u) end) if ok and r and r:sub(1,1) == "{" then local d = safeDec(r) if d and d.data then for _, sv in ipairs(d.data) do if not sn[sv.id] then sn[sv.id] = true table.insert(aSv, sv) end end c = d.nextPageCursor or "" else break end else break end p = p + 1 until c == "" or p >= m end
         fPD("Desc", 3) fPD("Asc", 3) aFi()
     end)
 end
@@ -1037,7 +977,7 @@ ffBtn.MouseButton1Click:Connect(function()
     task.spawn(function()
         local s, uid = pcall(function() return tonumber(ts) or Players:GetUserIdFromNameAsync(ts) end)
         if not s or not uid then bSr = false ffBtn.Text = "FIND" pLb.Text = "ERR: UID" return end
-        local gotAvatars = getTargetAvatars(uid) if not gotAvatars then bSr = false ffBtn.Text = "FIND" pLb.Text = "ERR: API" return end
+        local th = getCachedAvatar(uid) if th == "" then bSr = false ffBtn.Text = "FIND" pLb.Text = "ERR: API" return end
         local pId = gID local cr = "" local fS = nil
         
         local activeThreads = 0
@@ -1050,11 +990,7 @@ ffBtn.MouseButton1Click:Connect(function()
                 for idx, sv in ipairs(svs) do
                     if not bSr then break end
                     
-                    if sv.playing and sv.maxPlayers and sv.playing >= sv.maxPlayers then
-                        continue
-                    end
-                    
-                    while activeThreads >= currentMaxThreads do task.wait() end
+                    while activeThreads >= currentMaxThreads do RunService.Heartbeat:Wait() end
                     
                     activeThreads = activeThreads + 1
                     task.spawn(function()
@@ -1062,7 +998,7 @@ ffBtn.MouseButton1Click:Connect(function()
                             local sth, ths = fTDC(sv.playerTokens) 
                             if sth and ths then 
                                 for _, pt in ipairs(ths) do 
-                                    if pt.imageUrl and TargetHashes[pt.imageUrl] then 
+                                    if pt.imageUrl and pt.imageUrl == th then 
                                         fS = sv 
                                         bSr = false 
                                         playAlertSound()
@@ -1075,13 +1011,13 @@ ffBtn.MouseButton1Click:Connect(function()
                     end)
                     if fS then break end 
                     
-                    if idx % 10 == 0 then task.wait() end
+                    if idx % 10 == 0 then RunService.Heartbeat:Wait() end
                 end
                 if fS or not cr then break end
             else 
-                task.wait(3) 
+                task.wait(5) 
             end
-            task.wait(0.5)
+            task.wait(1)
             
             local avgFPS = getAverageFPS()
             if avgFPS > 45 and currentMaxThreads < 15 then
@@ -1091,7 +1027,7 @@ ffBtn.MouseButton1Click:Connect(function()
             end
         end
         
-        while activeThreads > 0 do task.wait() end
+        while activeThreads > 0 do RunService.Heartbeat:Wait() end
         
         bSr = false ffBtn.Text = "FIND"
         if fS then 
@@ -1101,7 +1037,7 @@ ffBtn.MouseButton1Click:Connect(function()
             pLb.Text = "FOUND" 
         else 
             pLb.Text = "GHOSTED" 
-            table.clear(aSv)
+            aSv = {} 
             aFi() 
         end
     end)
