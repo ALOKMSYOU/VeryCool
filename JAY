@@ -73,125 +73,14 @@ local function applyTex(p)
     local t = Instance.new("ImageLabel", p)
     t.Size = UDim2.new(1, 0, 1, 0)
     t.BackgroundTransparency = 1
-    t.Image = "rbxassetid://1676646541" 
-    t.ImageTransparency = 0.88
+    t.Image = "rbxassetid://3593361841" 
+    t.ImageTransparency = 0.85
     t.ImageColor3 = Theme.Primary
     t.ScaleType = Enum.ScaleType.Tile
-    t.TileSize = UDim2.new(0, 150, 0, 150)
+    t.TileSize = UDim2.new(0, 200, 0, 200)
     t.ZIndex = p.ZIndex
     rC(t, 12)
     t.ClipsDescendants = true
-end
-
-if not _G.JunkieVerified then
-    local GetKeyLink = "https://linkvertise.com/your_task_link" 
-    local KeyDatabaseURL = "https://pastebin.com/raw/YOUR_PASTEBIN"
-    
-    local kG = Instance.new("Frame", screenGui)
-    kG.Size = UDim2.new(0, 360, 0, 220)
-    kG.Position = UDim2.new(0.5, -180, 0.5, -110)
-    kG.BackgroundColor3 = Theme.Panel
-    kG.ZIndex = 999
-    rC(kG, 12)
-    rS(kG, Theme.Primary, 2)
-    applyTex(kG)
-    
-    local kT = Instance.new("TextLabel", kG)
-    kT.Size = UDim2.new(1, 0, 0, 40)
-    kT.Position = UDim2.new(0, 0, 0, 15)
-    kT.BackgroundTransparency = 1
-    kT.Text = "JUNKIE DEVELOPMENT"
-    kT.TextColor3 = Theme.Primary
-    kT.Font = Enum.Font.GothamBlack
-    kT.TextSize = 22
-    kT.ZIndex = 1000
-    
-    local kST = Instance.new("TextLabel", kG)
-    kST.Size = UDim2.new(1, 0, 0, 20)
-    kST.Position = UDim2.new(0, 0, 0, 50)
-    kST.BackgroundTransparency = 1
-    kST.Text = "PLEASE COMPLETE TASKS TO GET KEY"
-    kST.TextColor3 = Theme.SubText
-    kST.Font = Enum.Font.GothamBold
-    kST.TextSize = 11
-    kST.ZIndex = 1000
-    
-    local kBxBg = Instance.new("Frame", kG)
-    kBxBg.Size = UDim2.new(0.8, 0, 0, 45)
-    kBxBg.Position = UDim2.new(0.1, 0, 0, 90)
-    kBxBg.BackgroundColor3 = Theme.Item
-    kBxBg.ZIndex = 1000
-    rC(kBxBg, 8)
-    local kBxS = rS(kBxBg, Theme.Border, 1.5)
-    
-    local kBx = Instance.new("TextBox", kBxBg)
-    kBx.Size = UDim2.new(1, -20, 1, 0)
-    kBx.Position = UDim2.new(0, 10, 0, 0)
-    kBx.BackgroundTransparency = 1
-    kBx.TextColor3 = Theme.Text
-    kBx.PlaceholderText = "Paste Your Key Here..."
-    kBx.PlaceholderColor3 = Theme.SubText
-    kBx.Font = Enum.Font.Code
-    kBx.TextSize = 14
-    kBx.TextXAlignment = Enum.TextXAlignment.Center
-    kBx.Text = ""
-    kBx.ZIndex = 1001
-    
-    kBx.Focused:Connect(function() TweenService:Create(kBxS, TweenInfo.new(0.2), {Color = Theme.Primary}):Play() end)
-    kBx.FocusLost:Connect(function() TweenService:Create(kBxS, TweenInfo.new(0.2), {Color = Theme.Border}):Play() end)
-    
-    local kBtnV = Instance.new("TextButton", kG)
-    kBtnV.Size = UDim2.new(0.38, 0, 0, 40)
-    kBtnV.Position = UDim2.new(0.1, 0, 0, 155)
-    kBtnV.BackgroundColor3 = Theme.Primary
-    kBtnV.TextColor3 = Theme.BG
-    kBtnV.Font = Enum.Font.GothamBlack
-    kBtnV.TextSize = 14
-    kBtnV.Text = "VERIFY"
-    kBtnV.ZIndex = 1000
-    rC(kBtnV, 8) aP(kBtnV)
-    
-    local kBtnG = Instance.new("TextButton", kG)
-    kBtnG.Size = UDim2.new(0.38, 0, 0, 40)
-    kBtnG.Position = UDim2.new(0.52, 0, 0, 155)
-    kBtnG.BackgroundColor3 = Theme.Item
-    kBtnG.TextColor3 = Theme.SubText
-    kBtnG.Font = Enum.Font.GothamBlack
-    kBtnG.TextSize = 14
-    kBtnG.Text = "GET KEY"
-    kBtnG.ZIndex = 1000
-    rC(kBtnG, 8) rS(kBtnG, Theme.Border, 1.5) aH(kBtnG, Color3.fromRGB(15, 35, 20), Theme.Primary) aP(kBtnG)
-    
-    kBtnG.MouseButton1Click:Connect(function()
-        set_clipboard(GetKeyLink)
-        kBtnG.Text = "COPIED LINK!"
-        task.wait(1.5)
-        kBtnG.Text = "GET KEY"
-    end)
-    
-    kBtnV.MouseButton1Click:Connect(function()
-        if kBx.Text == "" then return end
-        kBtnV.Text = "CHECKING..."
-        local s, r = pcall(function() return game:HttpGet(KeyDatabaseURL) end)
-        
-        if (s and r and string.find(r, kBx.Text)) or kBx.Text == "JUNKIE-TEST" then
-            _G.JunkieVerified = true
-            kBtnV.Text = "SUCCESS!"
-            kBtnV.BackgroundColor3 = Color3.fromRGB(50, 255, 100)
-            task.wait(0.5)
-            TweenService:Create(kG, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.In), {Size = UDim2.new(0, 0, 0, 0)}):Play()
-            task.wait(0.5)
-            kG:Destroy()
-        else
-            kBtnV.Text = "INVALID KEY"
-            kBtnV.BackgroundColor3 = Theme.Danger
-            task.wait(1)
-            kBtnV.Text = "VERIFY"
-            kBtnV.BackgroundColor3 = Theme.Primary
-        end
-    end)
-    
-    repeat task.wait(0.1) until _G.JunkieVerified
 end
 
 local tBtn = Instance.new("TextButton", screenGui)
@@ -882,10 +771,7 @@ pBx.FocusLost:Connect(function() syID(pBx.Text) end)
 bpBx.FocusLost:Connect(function() syID(bpBx.Text) end)
 
 local function getUniverseId(placeId)
-    local s, r = pcall(function() return game:HttpGet("https://apis.roproxy.com/universes/v1/places/"..tostring(placeId).."/universe") end)
-    if not s or not r or r:sub(1,1) ~= "{" then
-        s, r = pcall(function() return game:HttpGet("https://apis.roblox.com/universes/v1/places/"..tostring(placeId).."/universe") end)
-    end
+    local s, r = pcall(function() return game:HttpGet("https://apis.roblox.com/universes/v1/places/"..tostring(placeId).."/universe") end)
     if s and r and r:sub(1,1) == "{" then
         local d = safeDec(r)
         if d and d.universeId then return d.universeId end
@@ -1288,7 +1174,7 @@ hG.Size = UDim2.new(0, 380, 0, 320)
 hG.Position = UDim2.new(0.5, -190, 0.5, -160)
 hG.BackgroundColor3 = Theme.Panel
 hG.Visible = false
-hG.ZIndex = 200
+hG.ZIndex = 50
 rC(hG, 12)
 rS(hG, Theme.Danger, 2)
 
@@ -1306,7 +1192,7 @@ hTitle.TextColor3 = Theme.Danger
 hTitle.Font = Enum.Font.GothamBlack
 hTitle.TextSize = 16
 hTitle.TextXAlignment = Enum.TextXAlignment.Left
-hTitle.ZIndex = 201
+hTitle.ZIndex = 51
 
 local hClose = Instance.new("TextButton", hG)
 hClose.Size = UDim2.new(0, 30, 0, 30)
@@ -1315,7 +1201,7 @@ hClose.BackgroundColor3 = Theme.Danger
 hClose.Text = "X"
 hClose.TextColor3 = Theme.BG
 hClose.Font = Enum.Font.GothamBlack
-hClose.ZIndex = 201
+hClose.ZIndex = 51
 rC(hClose, 6)
 hClose.MouseButton1Click:Connect(function() hG.Visible = false end)
 
@@ -1326,7 +1212,7 @@ hScroll.BackgroundColor3 = Theme.BG
 hScroll.BackgroundTransparency = 0.5
 hScroll.ScrollBarThickness = 3
 hScroll.ScrollBarImageColor3 = Theme.Danger
-hScroll.ZIndex = 201
+hScroll.ZIndex = 51
 rC(hScroll, 8)
 local hLay = Instance.new("UIListLayout", hScroll)
 hLay.Padding = UDim.new(0, 5)
@@ -1372,7 +1258,7 @@ local function loadPlayers()
         local pf = Instance.new("Frame", hScroll)
         pf.Size = UDim2.new(1, -10, 0, 40)
         pf.BackgroundColor3 = Theme.Item
-        pf.ZIndex = 202
+        pf.ZIndex = 52
         rC(pf, 6) rS(pf, Theme.Border, 1)
 
         local pImg = Instance.new("ImageLabel", pf)
@@ -1380,7 +1266,7 @@ local function loadPlayers()
         pImg.Position = UDim2.new(0, 5, 0.5, -15)
         pImg.BackgroundColor3 = Theme.BG
         pImg.Image = "rbxthumb://type=AvatarHeadShot&id="..p.UserId.."&w=150&h=150"
-        pImg.ZIndex = 203
+        pImg.ZIndex = 53
         rC(pImg, 15)
 
         local pName = Instance.new("TextLabel", pf)
@@ -1392,7 +1278,7 @@ local function loadPlayers()
         pName.Font = Enum.Font.GothamBold
         pName.TextSize = 12
         pName.TextXAlignment = Enum.TextXAlignment.Left
-        pName.ZIndex = 203
+        pName.ZIndex = 53
 
         local bTP = Instance.new("TextButton", pf)
         bTP.Size = UDim2.new(0, 35, 0, 26)
@@ -1402,7 +1288,7 @@ local function loadPlayers()
         bTP.TextColor3 = Theme.BG
         bTP.Font = Enum.Font.GothamBlack
         bTP.TextSize = 10
-        bTP.ZIndex = 203
+        bTP.ZIndex = 53
         rC(bTP, 4) aP(bTP)
         bTP.MouseButton1Click:Connect(function() tpToPlayer(p) end)
 
@@ -1414,7 +1300,7 @@ local function loadPlayers()
         bESP.TextColor3 = Theme.BG
         bESP.Font = Enum.Font.GothamBlack
         bESP.TextSize = 10
-        bESP.ZIndex = 203
+        bESP.ZIndex = 53
         rC(bESP, 4) aP(bESP)
         bESP.MouseButton1Click:Connect(function() applyESP(p) end)
 
@@ -1426,7 +1312,7 @@ local function loadPlayers()
         bVW.TextColor3 = Theme.Primary
         bVW.Font = Enum.Font.GothamBlack
         bVW.TextSize = 10
-        bVW.ZIndex = 203
+        bVW.ZIndex = 53
         rC(bVW, 4) rS(bVW, Theme.Primary, 1.5) aP(bVW)
         bVW.MouseButton1Click:Connect(function() toggleSpectate(p) end)
     end
