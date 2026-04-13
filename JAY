@@ -1,3 +1,8 @@
+-- if there someone see this massage pls dont leak script you can use Source But Give Some Credit
+-- Do Some System better than if you gonna use Source i try do some key system 
+-- but uh it broken so uh idk to bruh my 8 hours for do key system but not work 
+-- Credit base source Stream Snipe : Synapse x stream snipe 
+-- Credit Base Source Server Browser : Server Finder Deluxe
 local queue_on_teleport = queue_on_teleport or (syn and syn.queue_on_teleport) or (fluxus and fluxus.queue_on_teleport) or function() end
 
 queue_on_teleport([[
